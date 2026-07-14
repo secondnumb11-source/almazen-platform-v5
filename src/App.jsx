@@ -13,7 +13,10 @@ import PublicUnit from './pages/PublicUnit'
 import TenantPortal from './pages/TenantPortal'
 import ResetPassword from './pages/ResetPassword'
 import EjarPanel from './pages/EjarPanel'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 import AppSidebar from './components/AppSidebar'
+import DrawerWidget from './components/DrawerWidget'
 import RlsHealthBanner from './components/RlsHealthBanner'
 import ConfigErrorScreen from './components/ConfigErrorScreen'
 import TrialBanner from './components/TrialBanner'
@@ -163,6 +166,7 @@ function Shell() {
           {page === 'ai' && <Assistant />}
           {page === 'settings' && isOwner && <Settings />}
         </div>
+        <DrawerWidget />
       </div>
     </div>
   )
@@ -171,9 +175,10 @@ function Shell() {
 export default function App() {
   // إذا كانت متغيرات .env ناقصة أو غير صحيحة، نُظهر شاشة تنبيه بدل الانهيار الصامت
   if (!hasSupabaseConfig) return <ConfigErrorScreen />
-  // مسار عام لمشاركة الوحدة (بدون تسجيل دخول)
   const path = typeof window !== 'undefined' ? window.location.pathname : '/'
   if (path === '/reset-password') return <ResetPassword />
+  if (path === '/privacy') return <Privacy />
+  if (path === '/terms') return <Terms />
   const pubMatch = path.match(/^\/u\/([^/?#]+)/)
   if (pubMatch) return <PublicUnit slug={pubMatch[1]} />
   const portalMatch = path.match(/^\/portal\/([^/?#]+)/)

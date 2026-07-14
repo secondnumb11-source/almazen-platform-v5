@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
 import { SAR, num, today } from '../lib/helpers'
@@ -32,6 +35,7 @@ export default function AccountantTools() {
 
   return (
     <>
+      <EmbeddedAssistant />
       <ReportBuilder units={units} />
       <div className="tools-grid">
         <VatReportTool />
@@ -40,6 +44,94 @@ export default function AccountantTools() {
         <PeriodComparisonTool />
       </div>
     </>
+  )
+}
+
+/* ================= مساعد ذكي مدمج في بوابة المحاسب ================= */
+function EmbeddedAssistant() {
+  const { profile } = useAuth()
+  const [input, setInput] = useState('')
+  const box = useRef(null)
+
+  const supaUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drowmezlcrvowuhqmfef.supabase.co'
+  const supaKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  const [transport] = useState(() => new DefaultChatTransport({
+    api: `${supaUrl}/functions/v1/ai-assistant`,
+    headers: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token || supaKey}`,
+        'apikey': supaKey || '',
+      }
+    },
+    prepareSendMessagesRequest: ({ messages }) => ({
+      body: { messages, company_id: profile?.company_id }
+    }),
+  }))
+
+  const { messages, sendMessage, status, error } = useChat({ transport })
+  useEffect(() => { box.current?.scrollTo(0, 1e9) }, [messages, status])
+  const isLoading = status === 'submitted' || status === 'streaming'
+
+  const ask = (text) => {
+    const t = (text ?? input).trim()
+    if (!t || isLoading) return
+    setInput('')
+    sendMessage({ text: t })
+  }
+
+  const renderPart = (p, i) => {
+    if (p.type === 'text') return <ReactMarkdown key={i}>{p.text}</ReactMarkdown>
+    if (p.type?.startsWith('tool-')) {
+      return <div key={i} className="ai-tool"><b>⚙ {p.type.slice(5)}</b>
+        {p.state === 'output-available' && <div className="ai-tool-out">✓ {p.output?.count != null ? `${p.output.count} سجل` : 'نُفّذ'}</div>}
+      </div>
+    }
+    return null
+  }
+
+  const hints = [
+    'ملخص إيرادات هذا الشهر مقارنة بالسابق',
+    'المستأجرون المتأخرون عن السداد',
+    'ضريبة القيمة المضافة المستحقة هذا الربع',
+    'الوحدات الأعلى إيراداً هذا العام',
+  ]
+
+  return (
+    <div className="ai-embedded panel">
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 18 }}>🤖</span>
+        <b style={{ color: 'var(--green)', fontSize: 14 }}>المساعد الذكي للمحاسب</b>
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>اسأل بلغة طبيعية واحصل على أي تقرير أو تحليل</span>
+      </div>
+      <div className="ai-box" style={{ height: 340 }}>
+        <div className="ai-msgs" ref={box}>
+          {messages.length === 0 && (
+            <div className="msg a">
+              <ReactMarkdown>{'اسألني عن أي تقرير مالي، تحليل إيرادات، متأخرات، أو استفسار محاسبي...'}</ReactMarkdown>
+            </div>
+          )}
+          {messages.map(m => (
+            <div key={m.id} className={'msg ' + (m.role === 'assistant' ? 'a' : 'u')}>
+              {m.parts?.map(renderPart) || m.content}
+            </div>
+          ))}
+          {status === 'submitted' && <div className="msg a"><i>⏳ جارٍ التحليل…</i></div>}
+          {error && <div className="msg a" style={{ color: '#c00' }}>خطأ: {error.message}</div>}
+        </div>
+        <div className="suggest">{hints.map(s => <button key={s} onClick={() => ask(s)} disabled={isLoading}>{s}</button>)}</div>
+        <div className="ai-in">
+          <input value={input} onChange={e => setInput(e.target.value)}
+            placeholder="اطلب تقريراً أو تحليلاً محاسبياً…"
+            onKeyDown={e => e.key === 'Enter' && ask()} disabled={isLoading} />
+          <button className="btn btn-gold btn-sm" onClick={() => ask()} disabled={isLoading}>
+            {isLoading ? '…' : 'إرسال'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

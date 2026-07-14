@@ -107,11 +107,18 @@ export default function Units() {
       <div className="units-grid units-grid-compact">
         {filtered.map(u => {
           const bk = activeBk[u.id]
-          const showDates = u.status === 'occupied' && bk
+          const hasDates = bk?.check_in_date && bk?.check_out_date
+          const hoursLeft = bk?.check_out_date
+            ? (new Date(bk.check_out_date + 'T23:59:59') - Date.now()) / 3600000
+            : Infinity
+          const evictSoon = hoursLeft >= 0 && hoursLeft <= 24
           return (
-            <div key={u.id} className={'unit-tile unit-tile-sm ' + STATUS[u.status].cls} onClick={() => setSel(u)}>
+            <div key={u.id}
+              className={'unit-tile unit-tile-sm ' + STATUS[u.status].cls + (evictSoon ? ' evict-soon' : '')}
+              onClick={() => setSel(u)}>
               <span className="stpulse" />
               <span className="st">{STATUS[u.status].label}</span>
+              {evictSoon && <span className="evict-badge">⚠ إخلاء قريب</span>}
               <div className="tile-top">
                 {thumbs[u.id]
                   ? <img className="tile-thumb" src={thumbs[u.id]} alt="" />
@@ -126,10 +133,10 @@ export default function Units() {
                 {u.monthly_price ? <>· شهري: <b>{num(u.monthly_price).toLocaleString()}</b> </> : ''}
                 <small> ر.س</small>
               </div>
-              {showDates && (
-                <div className="tile-dates">
-                  <span>دخول: <b>{bk.check_in_date}</b></span>
-                  <span>خروج: <b>{bk.check_out_date}</b></span>
+              {hasDates && (
+                <div className="tile-dates-all">
+                  <span>🔑 <b>{bk.check_in_date}</b></span>
+                  <span>🚪 <b>{bk.check_out_date}</b></span>
                 </div>
               )}
               {bk?.ejar_status === 'registered' && (
@@ -315,6 +322,13 @@ function UnitModal({ unit, onClose }) {
     } catch (e) { toast('فشل الرفع: ' + e.message, true) }
   }
 
+  const deleteMedia = async (id) => {
+    if (!confirm('حذف هذه الصورة/الفيديو نهائياً؟')) return
+    const { error } = await supabase.from('unit_media').delete().eq('id', id)
+    if (error) return toast('خطأ في الحذف: ' + error.message, true)
+    toast('تم حذف الملف ✓'); load()
+  }
+
   const setStatus = async (status) => {
     const { error } = await supabase.from('units').update({ status }).eq('id', unit.id)
     if (error) return toast('خطأ: ' + error.message, true)
@@ -363,13 +377,21 @@ function UnitModal({ unit, onClose }) {
               <div>
                 {media.length === 0
                   ? <div style={{ height: 170, borderRadius: 12, background: 'linear-gradient(140deg,var(--blue-2),var(--green))', display: 'grid', placeItems: 'center', color: 'var(--gold-l)' }}>📷 لا توجد صور بعد</div>
-                  : media[0].media_type === 'video'
-                    ? <video src={media[0].url} controls style={{ width: '100%', height: 170, borderRadius: 12, objectFit: 'cover' }} />
-                    : <img src={media[0].url} style={{ width: '100%', height: 170, borderRadius: 12, objectFit: 'cover' }} />}
+                  : <div className="media-item" style={{ position: 'relative' }}>
+                      {media[0].media_type === 'video'
+                        ? <video src={media[0].url} controls style={{ width: '100%', height: 170, borderRadius: 12, objectFit: 'cover' }} />
+                        : <img src={media[0].url} style={{ width: '100%', height: 170, borderRadius: 12, objectFit: 'cover' }} />}
+                      <button className="media-del-btn" onClick={() => deleteMedia(media[0].id)}>✕ حذف</button>
+                    </div>}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 7, marginTop: 8 }}>
-                  {media.slice(1, 5).map(m => m.media_type === 'video'
-                    ? <video key={m.id} src={m.url} style={{ height: 52, width: '100%', borderRadius: 8, objectFit: 'cover' }} />
-                    : <img key={m.id} src={m.url} style={{ height: 52, width: '100%', borderRadius: 8, objectFit: 'cover' }} />)}
+                  {media.slice(1).map(m => (
+                    <div key={m.id} className="media-item" style={{ position: 'relative' }}>
+                      {m.media_type === 'video'
+                        ? <video src={m.url} style={{ height: 52, width: '100%', borderRadius: 8, objectFit: 'cover' }} />
+                        : <img src={m.url} style={{ height: 52, width: '100%', borderRadius: 8, objectFit: 'cover' }} />}
+                      <button className="media-del-btn" style={{ fontSize: 10, padding: '2px 5px' }} onClick={() => deleteMedia(m.id)}>✕</button>
+                    </div>
+                  ))}
                 </div>
                 <label className="btn btn-ghost btn-sm" style={{ marginTop: 10 }}>
                   📤 رفع صورة / فيديو

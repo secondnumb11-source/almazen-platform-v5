@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../AuthContext'
 import { ROLES } from '../lib/helpers'
 
@@ -12,6 +12,51 @@ const items = [
   { k: 'settings', label: 'الإعدادات', icon: '⚙️', roles: 'owner' }
 ]
 
+function pad(n) { return String(n).padStart(2, '0') }
+
+function SidebarClock({ collapsed }) {
+  const [now, setNow] = useState(new Date())
+  const [hijri, setHijri] = useState(false)
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const hh = pad(now.getHours())
+  const mm = pad(now.getMinutes())
+  const ss = pad(now.getSeconds())
+
+  const dateStr = hijri
+    ? now.toLocaleDateString('ar-SA-u-ca-islamic', { year: 'numeric', month: 'short', day: 'numeric' })
+    : now.toLocaleDateString('ar-SA', { weekday: 'short', day: 'numeric', month: 'short' })
+
+  if (collapsed) return (
+    <div className="sb-clock-mini" title={`${hh}:${mm}`}>
+      <span className="sb-clock-dot" />
+    </div>
+  )
+
+  return (
+    <div className="sb-clock">
+      <div className="sb-clock-time">
+        <span>{hh}</span>
+        <span className="sb-colon">:</span>
+        <span>{mm}</span>
+        <span className="sb-colon">:</span>
+        <span className="sb-sec">{ss}</span>
+      </div>
+      <div className="sb-clock-date">{dateStr}</div>
+      <button
+        className="sb-cal-toggle"
+        onClick={() => setHijri(h => !h)}
+        title={hijri ? 'التاريخ الميلادي' : 'التاريخ الهجري'}
+      >
+        {hijri ? '🗓 م' : '🌙 هـ'}
+      </button>
+    </div>
+  )
+}
 
 export default function AppSidebar({ page, setPage, collapsed, onToggle }) {
   const { profile, company, isOwner, canFinance, signOut } = useAuth()
@@ -37,6 +82,8 @@ export default function AppSidebar({ page, setPage, collapsed, onToggle }) {
           {collapsed ? '›' : '‹'}
         </button>
       </div>
+
+      <SidebarClock collapsed={collapsed} />
 
       <nav className="sb-nav">
         {visible.map(it => (

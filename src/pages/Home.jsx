@@ -57,7 +57,7 @@ export default function Home({ onNav }) {
       <div className="hero-strip">
         <div>
           <div className="hero-hi">{greet} {profile?.full_name?.split(' ')[0]} 👋</div>
-          <h2>لوحة {canFinance ? 'المحاسب' : 'الموظف'} — {company?.name || 'المازن'}</h2>
+          <h2>{company?.name || 'المازن'}</h2>
           <div className="hero-sub">اليوم {new Date().toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
         </div>
         <div className="hero-actions">

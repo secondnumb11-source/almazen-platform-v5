@@ -72,11 +72,30 @@ export default function Assistant() {
     return null
   }
 
+  const printChat = () => {
+    const el = box.current
+    if (!el) return
+    const win = window.open('', '_blank')
+    win.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>محادثة المساعد الذكي</title>
+      <style>body{font-family:Tajawal,Tahoma,sans-serif;padding:24px;color:#0e2340;direction:rtl}
+      .u{background:#0e2340;color:#fff;padding:9px 13px;border-radius:13px;margin-bottom:8px;max-width:80%;margin-inline-start:auto}
+      .a{background:#f4f7fb;padding:9px 13px;border-radius:13px;margin-bottom:8px;max-width:80%}
+      h1{font-size:18px;border-bottom:2px solid #c6a24b;padding-bottom:8px;margin-bottom:16px}
+      </style></head><body>
+      <h1>محادثة المساعد الذكي — ${new Date().toLocaleString('ar-SA')}</h1>
+      ${el.innerHTML}</body></html>`)
+    win.document.close()
+    win.print()
+  }
+
   return (
     <div>
       <div className="pg-title">
         <h2>🤖 المساعد الذكي غير المحدود</h2>
-        <span className="chip">مدعوم بـ Lovable AI — يفهم أي طلب ويستخرج أي تقرير</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="chip">يفهم أي طلب ويستخرج أي تقرير من بياناتك الفعلية</span>
+          <button className="ai-print-btn" onClick={printChat} title="طباعة المحادثة">🖨 طباعة</button>
+        </div>
       </div>
       <div className="panel ai-box">
         <div className="ai-msgs" ref={box}>

@@ -307,7 +307,37 @@ export default function Landing({ onLogin }) {
         <p>بوابتان للدخول: الموظف باسم مستخدم ينشئه المدير، والمدير بالبريد الإلكتروني</p>
         <button className="btn btn-gold" style={{ fontSize: 17, padding: '15px 44px' }} onClick={onLogin}>تسجيل الدخول أو التسجيل لتجربة المنصة 7 أيام مجاناً</button>
       </section>
-      <footer className="ld-footer">المازن © 2026 — منصة إدارة إيجارات الشقق المفروشة والشاليهات والوحدات العقارية</footer>
+      <footer className="ld-footer-full">
+        <div className="ld-footer-grid">
+          <div className="ld-footer-col">
+            <h4>🏢 المازن للعقارات</h4>
+            <p>منصة إدارة الوحدات السكنية والإيجارات بذكاء وكفاءة عالية. مصممة وفق المتطلبات السعودية.</p>
+          </div>
+          <div className="ld-footer-col">
+            <h4>روابط سريعة</h4>
+            <a href="/privacy">سياسة الخصوصية</a>
+            <a href="/terms">شروط الاستخدام</a>
+          </div>
+          <div className="ld-footer-col">
+            <h4>الدعم والتواصل</h4>
+            <div className="contact-row">
+              <span>✉</span>
+              <a href="mailto:info@adala-law.online">info@adala-law.online</a>
+            </div>
+            <div className="contact-row">
+              <span>📞</span>
+              <span>دعم 24 ساعة — الرياض</span>
+            </div>
+          </div>
+        </div>
+        <div className="ld-footer-bottom">
+          <span>المازن © 2026 — منصة إدارة إيجارات الشقق المفروشة والشاليهات والوحدات العقارية</span>
+          <div className="ld-footer-links">
+            <a href="/privacy">سياسة الخصوصية</a>
+            <a href="/terms">شروط الاستخدام</a>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

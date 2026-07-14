@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
 import { SAR, PAY_METHODS } from '../lib/helpers'
 
+const PORTAL_BASE = 'https://al-mazen-platform.vercel.app'
+
 /* ملخص إيجار مطبوع لتقديمه للمستأجر عند نهاية المدة أو مع الفاتورة */
 export default function TenantSummary({ booking, unit, onClose, autoSend }) {
   const { company, profile, toast } = useAuth()
@@ -10,6 +12,7 @@ export default function TenantSummary({ booking, unit, onClose, autoSend }) {
   const [handovers, setHandovers] = useState([])
   const [portalUser, setPortalUser] = useState('')
   const [portalToken, setPortalToken] = useState('')
+  const [portalLoaded, setPortalLoaded] = useState(false)
   const [editingCreds, setEditingCreds] = useState(false)
   const [savingCreds, setSavingCreds] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
@@ -20,6 +23,7 @@ export default function TenantSummary({ booking, unit, onClose, autoSend }) {
       .select('username, access_token').eq('booking_id', booking.id).maybeSingle()
     setPortalUser(acct?.username || '')
     setPortalToken(acct?.access_token || '')
+    setPortalLoaded(true)
   }
 
   useEffect(() => {
@@ -28,9 +32,9 @@ export default function TenantSummary({ booking, unit, onClose, autoSend }) {
       const [{ data: p }, { data: h }] = await Promise.all([
         supabase.from('payments').select('*').eq('booking_id', booking.id).order('payment_date'),
         supabase.from('handovers').select('*').eq('booking_id', booking.id).order('created_at'),
-        loadPortalAccount()
       ])
       setPayments(p || []); setHandovers(h || [])
+      await loadPortalAccount()
     })()
   }, [booking?.id])
 
@@ -38,7 +42,8 @@ export default function TenantSummary({ booking, unit, onClose, autoSend }) {
   const insurance = payments.filter(p => p.payment_type === 'insurance').reduce((s, p) => s + Number(p.amount), 0)
   const remaining = Number(booking.total_amount || 0) - paid
 
-  const portalUrl = portalToken ? `${window.location.origin}/portal/${portalToken}` : ''
+  const baseUrl = company?.public_base_url || PORTAL_BASE
+  const portalUrl = portalToken ? `${baseUrl}/portal/${portalToken}` : ''
   const welcomeMessage = `مرحبًا ${booking.customers?.full_name || 'عزيزنا المستأجر'} 🌸
 
 يسعدنا استقبالك في ${company?.name || 'المازن'}، ونتمنى لك إقامة ممتعة ومريحة في وحدتك رقم ${unit?.unit_number}.
@@ -60,12 +65,12 @@ export default function TenantSummary({ booking, unit, onClose, autoSend }) {
 — ${company?.name || 'المازن'}`
 
   useEffect(() => {
-    if (!autoSend || sentRef.current || !booking.customers?.phone) return
+    if (!autoSend || sentRef.current || !booking.customers?.phone || !portalLoaded) return
     sentRef.current = true
     const t = setTimeout(() => waSend(), 400)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSend, portalToken])
+  }, [autoSend, portalLoaded, portalToken])
 
   const copyWelcome = async () => {
     try { await navigator.clipboard.writeText(welcomeMessage); toast('✓ تم نسخ الرسالة الترحيبية') }

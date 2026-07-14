@@ -1,0 +1,7 @@
+project_id = "drowmezlcrvowuhqmfef"
+
+[functions.ai-assistant]
+verify_jwt = true
+
+[functions.auth-email]
+verify_jwt = false

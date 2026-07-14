@@ -29,6 +29,7 @@ function Shell() {
   const [forceUpgrade, setForceUpgrade] = useState(false)
   const [page, setPage] = useState('home')
   const [notifs, setNotifs] = useState([])
+  const [evictionAlerts, setEvictionAlerts] = useState([])
   const [drawer, setDrawer] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const presenceRef = useRef(null)
@@ -46,6 +47,23 @@ function Shell() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, load)
       .subscribe()
     return () => supabase.removeChannel(ch)
+  }, [profile])
+
+  useEffect(() => {
+    if (!profile) return
+    const loadEvictions = async () => {
+      const today = new Date().toISOString().split('T')[0]
+      const { data } = await supabase
+        .from('bookings')
+        .select('id, unit_id, check_out_date, customers(full_name), units(name)')
+        .eq('company_id', profile.company_id)
+        .eq('status', 'checked_in')
+        .eq('check_out_date', today)
+      setEvictionAlerts(data || [])
+    }
+    loadEvictions()
+    const t = setInterval(loadEvictions, 10 * 60 * 1000)
+    return () => clearInterval(t)
   }, [profile])
 
   // بث الحضور الحيّ (بديل TeamViewer): كل مستخدم يبث الصفحة الحالية عبر Realtime Presence
@@ -117,7 +135,7 @@ function Shell() {
     return <TrialExpired mode="upgrade" />
   }
 
-  const unread = notifs.filter(n => !n.read_at && n.channel === 'in_app').length
+  const unread = notifs.filter(n => !n.read_at && n.channel === 'in_app').length + evictionAlerts.length
   const pageTitles = { home:'الرئيسية', dash:'إدارة الوحدات', reports:'بوابة المحاسب', center:'مركز التقارير والمراقبة', ejar:'التكامل مع منصة إيجار', ai:'المساعد الذكي', settings:'الإعدادات' }
 
   return (
@@ -145,7 +163,18 @@ function Shell() {
         {drawer && (
           <div className="notif-drawer">
             <h4>الإشعارات</h4>
-            {notifs.length === 0 && <div className="notif-item">لا توجد إشعارات بعد</div>}
+            {evictionAlerts.length > 0 && (
+              <div className="notif-evict-section">
+                <div className="notif-evict-hdr">⚠ إخلاء اليوم</div>
+                {evictionAlerts.map(b => (
+                  <div className="notif-item notif-evict" key={`ev-${b.id}`}>
+                    <b>🚨 الوحدة {b.units?.name || b.unit_id}</b>
+                    <span>{b.customers?.full_name || 'مستأجر'} — موعد الإخلاء اليوم</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {notifs.length === 0 && evictionAlerts.length === 0 && <div className="notif-item">لا توجد إشعارات بعد</div>}
             {notifs.map(n => (
               <div className="notif-item" key={n.id}>
                 <b>{n.title} {n.channel !== 'in_app' && <span className="chip" style={{ background: 'var(--soft)', color: 'var(--green)' }}>{n.channel === 'whatsapp' ? 'واتساب' : n.channel}</span>}</b>

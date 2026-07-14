@@ -290,6 +290,7 @@ function UnitModal({ unit, onClose }) {
   const [editOpen, setEditOpen] = useState(false)
   const [handover, setHandover] = useState(null)   // 'check_in' | 'check_out' | null
   const [summaryFor, setSummaryFor] = useState(null)
+  const [autoWelcome, setAutoWelcome] = useState(false)
   const [hFilter, setHFilter] = useState({ cust: '', from: '', to: '' })
   const active = bookings.find(b => ['confirmed', 'checked_in'].includes(b.status))
 
@@ -476,13 +477,17 @@ function UnitModal({ unit, onClose }) {
             </div>
           )}
 
-          {tab === 'book' && <BookingForm unit={unit} active={active} onDone={onClose} />}
+          {tab === 'book' && <BookingForm unit={unit} active={active} onDone={(bk, status) => {
+            if (bk && status === 'checked_in') { setAutoWelcome(true); setSummaryFor(bk); load() }
+            else onClose()
+          }} />}
         </div>
       </div>
       {editOpen && <UnitForm unit={unit} onClose={() => { setEditOpen(false); onClose() }} />}
       {handover && <HandoverModal unit={unit} booking={active} kind={handover}
         onClose={(saved) => { setHandover(null); if (saved) load() }} />}
-      {summaryFor && <TenantSummary booking={summaryFor} unit={unit} onClose={() => setSummaryFor(null)} />}
+      {summaryFor && <TenantSummary booking={summaryFor} unit={unit} autoSend={autoWelcome}
+        onClose={() => { setSummaryFor(null); setAutoWelcome(false) }} />}
     </div>
   )
 }
@@ -625,7 +630,13 @@ function BookingForm({ unit, active, onDone }) {
         : targetStatus === 'checked_in'
           ? '✓ تم التسليم وبدء المدة — الوحدة حمراء الآن، وأُنشئت بوابة المستأجر وأُشعر المحاسب والمدير تلقائياً (تحقق من 🔔)'
           : '✓ تم تأكيد الحجز — الوحدة برتقالية الآن ومُنع الحجز المزدوج على هذه التواريخ')
-      onDone()
+      if (!needsApproval && targetStatus === 'checked_in') {
+        const { data: fullBk } = await supabase.from('bookings')
+          .select('*, customers(full_name, phone, id_number)').eq('id', bk.id).single()
+        onDone(fullBk, targetStatus)
+      } else {
+        onDone()
+      }
     } catch (e) {
       toast(e.message.includes('no_double_booking')
         ? '⚠ حجز مزدوج مرفوض: توجد حجوزات متداخلة على نفس التواريخ لهذه الوحدة'

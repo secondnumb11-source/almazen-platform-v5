@@ -91,7 +91,7 @@ export default function Landing({ onLogin }) {
             <div><b><span data-count="8500" data-suffix="+">0</span></b><span>وحدة تُدار يومياً</span></div>
             <div><b><span data-count="99.9" data-suffix="%">0</span></b><span>دقة الحسابات</span></div>
             <div><b>ZATCA</b><span>فوترة متوافقة</span></div>
-            <div className="ld-ejar-badge"><b>🏛️ إيجار</b><span>تكامل رسمي</span></div>
+            <div className="ld-ejar-badge"><b>🏛️ إيجار</b><span>قريباً</span></div>
           </div>
         </div>
       </section>
@@ -128,11 +128,11 @@ export default function Landing({ onLogin }) {
             <span className="ld-badge-inline">حصري ✦ ميزة فريدة</span>
             <h2>تكامل مباشر مع منصة «إيجار» الرسمية</h2>
             <div className="ld-rule" />
-            <p>
-              المازن هي أول منصة إدارة ضيافة سعودية تربط عقود إيجاراتك مباشرةً بمنصة <b>إيجار</b> الحكومية —
-              بدون الحاجة لإعادة إدخال بيانات المستأجر أو الوحدة أو رفع ملفات يدوياً.
-              وثّق العقد رسمياً بضغطة زر، وتتبّع حالته الحية داخل النظام نفسه.
-            </p>
+            <div className="ld-soon-box">
+              <span className="ld-soon-shine" aria-hidden="true" />
+              <span className="ld-soon-icon">⏳</span>
+              <span className="ld-soon-text">قريباً</span>
+            </div>
             <div className="ld-ejar-benefits">
               <div><b>👔 للمديرين</b><span>غطاء قانوني رسمي لكل عقد، وحماية كاملة لحقوق المنشأة أمام أي نزاع.</span></div>
               <div><b>📊 للمحاسبين</b><span>سجل موحّد بين النظام وإيجار — لا تناقض في الأرقام ولا مطابقات يدوية.</span></div>
@@ -211,7 +211,7 @@ export default function Landing({ onLogin }) {
       <section className="ld-sec" style={{ background: 'var(--soft)', maxWidth: 'none' }}>
         <div style={{ maxWidth: 1180, margin: 'auto' }}>
           <div className="ld-sec-head">
-            <h2>بوابة المحاسب — مكتب محاسبة كامل داخل المنصة</h2>
+            <h2 className="ld-shine-heading">بوابة المحاسب — مكتب محاسبة كامل داخل المنصة</h2>
             <div className="ld-rule" />
             <p>أقوى ما في المازن: كل ما يحتاجه المحاسب من استخراج وتنظيم وتصدير وتحليل، بأدوات ذكاء اصطناعي تعمل على بياناتك الحقيقية.</p>
           </div>

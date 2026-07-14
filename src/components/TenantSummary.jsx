@@ -1,54 +1,71 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
 import { SAR, PAY_METHODS } from '../lib/helpers'
 
 /* ملخص إيجار مطبوع لتقديمه للمستأجر عند نهاية المدة أو مع الفاتورة */
-export default function TenantSummary({ booking, unit, onClose }) {
+export default function TenantSummary({ booking, unit, onClose, autoSend }) {
   const { company, profile, toast } = useAuth()
   const [payments, setPayments] = useState([])
   const [handovers, setHandovers] = useState([])
   const [portalUser, setPortalUser] = useState('')
+  const [portalToken, setPortalToken] = useState('')
   const [editingCreds, setEditingCreds] = useState(false)
   const [savingCreds, setSavingCreds] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const sentRef = useRef(false)
+
+  const loadPortalAccount = async () => {
+    const { data: acct } = await supabase.from('tenant_portal_accounts')
+      .select('username, access_token').eq('booking_id', booking.id).maybeSingle()
+    setPortalUser(acct?.username || '')
+    setPortalToken(acct?.access_token || '')
+  }
 
   useEffect(() => {
     if (!booking?.id) return
     ;(async () => {
-      const [{ data: p }, { data: h }, { data: c }] = await Promise.all([
+      const [{ data: p }, { data: h }] = await Promise.all([
         supabase.from('payments').select('*').eq('booking_id', booking.id).order('payment_date'),
         supabase.from('handovers').select('*').eq('booking_id', booking.id).order('created_at'),
-        supabase.from('customers').select('portal_username').eq('id', booking.customer_id).maybeSingle()
+        loadPortalAccount()
       ])
       setPayments(p || []); setHandovers(h || [])
-      setPortalUser(c?.portal_username || booking.customers?.phone || '')
     })()
-  }, [booking?.id, booking?.customer_id, booking?.customers?.phone])
+  }, [booking?.id])
 
   const paid = payments.filter(p => p.payment_type !== 'insurance').reduce((s, p) => s + Number(p.amount), 0)
   const insurance = payments.filter(p => p.payment_type === 'insurance').reduce((s, p) => s + Number(p.amount), 0)
   const remaining = Number(booking.total_amount || 0) - paid
 
-  const portalUrl = `${window.location.origin}/tenant-portal`
+  const portalUrl = portalToken ? `${window.location.origin}/portal/${portalToken}` : ''
   const welcomeMessage = `مرحبًا ${booking.customers?.full_name || 'عزيزنا المستأجر'} 🌸
 
 يسعدنا استقبالك في ${company?.name || 'المازن'}، ونتمنى لك إقامة ممتعة ومريحة في وحدتك رقم ${unit?.unit_number}.
 
 📅 مدة الإيجار: ${booking.check_in_date} → ${booking.check_out_date}
 
-🔐 بيانات دخول بوابتك الخاصة:
-• الرابط: ${portalUrl}
-• اسم المستخدم: ${portalUser}
-• للدخول: استخدم رابط الدعوة الآمن الذي يرسله لك النظام (رابط مؤقت لمرة واحدة)
-
-من خلال البوابة يمكنك:
+من خلال بوابتك الخاصة يمكنك:
 ✓ متابعة الدفعات والفواتير والمتبقي
 ✓ طلب صيانة أو خدمة إضافية
 ✓ تمديد الإيجار أو حجز مبكر
 ✓ الاطلاع على ملخص إقامتك ورقم التواصل المباشر
 
+🔐 بيانات دخول بوابتك الخاصة:
+• الرابط: ${portalUrl || '(سيتوفر فور تسليم الوحدة)'}
+• اسم المستخدم: ${portalUser || '—'}
+• كلمة المرور: ${portalToken || '—'}
+
 فريقنا في خدمتك على مدار الساعة. أهلًا بك 🌟
 — ${company?.name || 'المازن'}`
+
+  useEffect(() => {
+    if (!autoSend || sentRef.current || !booking.customers?.phone) return
+    sentRef.current = true
+    const t = setTimeout(() => waSend(), 400)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSend, portalToken])
 
   const copyWelcome = async () => {
     try { await navigator.clipboard.writeText(welcomeMessage); toast('✓ تم نسخ الرسالة الترحيبية') }
@@ -63,13 +80,22 @@ export default function TenantSummary({ booking, unit, onClose }) {
   const saveCreds = async () => {
     if (!portalUser.trim()) return toast('اسم المستخدم مطلوب', true)
     setSavingCreds(true)
-    const { error } = await supabase.from('customers')
-      .update({ portal_username: portalUser.trim() })
-      .eq('id', booking.customer_id)
+    const { error } = await supabase.from('tenant_portal_accounts')
+      .update({ username: portalUser.trim() })
+      .eq('booking_id', booking.id)
     setSavingCreds(false)
     if (error) return toast('خطأ: ' + error.message, true)
     toast('✓ تم تحديث بيانات دخول المستأجر')
     setEditingCreds(false)
+  }
+
+  const regenerateToken = async () => {
+    setRegenerating(true)
+    const { data, error } = await supabase.rpc('portal_regenerate_token', { p_booking_id: booking.id })
+    setRegenerating(false)
+    if (error) return toast('تعذّر توليد كلمة مرور جديدة: ' + error.message, true)
+    setPortalToken(data)
+    toast('✓ تم توليد كلمة مرور جديدة للبوابة — أرسلها للمستأجر')
   }
 
   return (
@@ -114,9 +140,16 @@ export default function TenantSummary({ booking, unit, onClose }) {
                   <label>اسم المستخدم للبوابة</label>
                   <input value={portalUser} onChange={e => setPortalUser(e.target.value)} dir="ltr" />
                 </div>
-                <div style={{ gridColumn: '1 / -1' }}>
+                <div className="fld">
+                  <label>كلمة المرور (رمز الدخول)</label>
+                  <input value={portalToken} readOnly dir="ltr" style={{ opacity: .75 }} />
+                </div>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button className="btn btn-gold btn-sm" disabled={savingCreds} onClick={saveCreds}>
-                    {savingCreds ? '…' : 'حفظ بيانات الدخول'}
+                    {savingCreds ? '…' : 'حفظ اسم المستخدم'}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" disabled={regenerating} onClick={regenerateToken}>
+                    {regenerating ? '…' : '🔄 توليد كلمة مرور جديدة'}
                   </button>
                 </div>
               </div>

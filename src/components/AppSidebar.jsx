@@ -7,7 +7,7 @@ const items = [
   { k: 'dash', label: 'إدارة الوحدات', icon: '🏢', roles: 'all' },
   { k: 'reports', label: 'بوابة المحاسب', icon: '📊', roles: 'finance' },
   { k: 'center', label: 'مركز التقارير والمراقبة', icon: '🛰️', roles: 'finance' },
-  { k: 'ejar', label: 'التكامل مع منصة إيجار', icon: '🏛️', roles: 'finance' },
+  { k: 'ejar', label: 'التكامل مع منصة إيجار', icon: '🏛️', roles: 'finance', soon: true },
   { k: 'ai', label: 'المساعد الذكي', icon: '🤖', roles: 'all' },
   { k: 'settings', label: 'الإعدادات', icon: '⚙️', roles: 'owner' }
 ]
@@ -45,7 +45,7 @@ export default function AppSidebar({ page, setPage, collapsed, onToggle }) {
             onClick={() => setPage(it.k)}
             title={it.label}>
             <span className="sb-ico">{it.icon}</span>
-            {!collapsed && <span className="sb-label">{it.label}</span>}
+            {!collapsed && <span className="sb-label">{it.label}{it.soon && <small className="sb-soon"> (قريباً)</small>}</span>}
             {page === it.k && <span className="sb-active" />}
           </button>
         ))}

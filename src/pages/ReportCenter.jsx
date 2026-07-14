@@ -266,7 +266,13 @@ create policy if not exists storage_delete_own_company on storage.objects for de
     bucket_id in ('unit-media','handover-signatures')
     and (storage.foldername(name))[1] = (select company_id::text from profiles where id = auth.uid())
     and (select role from profiles where id = auth.uid()) in ('owner','manager')
-  );`
+  );
+
+-- ملاحظة: إن ظهرت هذه المخازن "ناقصة" هنا رغم وجودها فعلياً، فالسبب
+-- الأرجح أن storage.buckets نفسها بلا سياسة قراءة (RLS يمنع listBuckets()
+-- من إعادة أي نتيجة). نفّذ هذا أيضاً:
+create policy if not exists buckets_list_authenticated on storage.buckets for select
+  to authenticated using (true);`
 
 function StorageCheck() {
   const { toast } = useAuth()

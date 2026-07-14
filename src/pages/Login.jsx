@@ -19,6 +19,7 @@ export default function Login({ onBack }) {
   const [busy, setBusy] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [f, setF] = useState({ user: '', email: '', pass: '', resetEmail: '' })
+  const [tenantF, setTenantF] = useState({ user: '', token: '' })
   const [setup, setSetup] = useState({ coName: '', fullName: '', vat: '' })
   const [authError, setAuthError] = useState(null)
   const [notice, setNotice] = useState(null)
@@ -35,6 +36,19 @@ export default function Login({ onBack }) {
     setAuthError({ msg: translateAuthError(error), details: authErrorDetails(error) })
   }
   const clearFeedback = () => { setAuthError(null); setNotice(null) }
+
+  const loginTenant = async (e) => {
+    e?.preventDefault?.()
+    if (!tenantF.user || !tenantF.token) return showError({ message: 'أدخل اسم المستخدم ورمز الدخول' })
+    clearFeedback(); setBusy(true)
+    const { data, error } = await supabase.rpc('portal_validate_login', {
+      p_username: tenantF.user.trim(),
+      p_token: tenantF.token.trim()
+    })
+    setBusy(false)
+    if (error || !data) return showError({ message: 'اسم المستخدم أو رمز الدخول غير صحيح — تواصل مع المنشأة للحصول على بيانات الدخول' })
+    window.location.href = `/portal/${data}`
+  }
 
   const login = async (emails) => {
     const candidates = Array.isArray(emails) ? emails : [emails]
@@ -275,24 +289,29 @@ export default function Login({ onBack }) {
             <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 10 }} disabled={busy} onClick={() => setForgot(false)}>العودة لتسجيل الدخول</button>
           </>) : (<>
             <div className="tabs">
-              <button className={tab === 'emp' ? 'on' : ''} onClick={() => setTab('emp')}>بوابة الموظف</button>
+              <button className={tab === 'ten' ? 'on' : ''} onClick={() => setTab('ten')}>بوابة المستأجر</button>
+              <button className={tab === 'emp' ? 'on' : ''} onClick={() => setTab('emp')}>بوابة موظف الاستقبال</button>
+              <button className={tab === 'fin' ? 'on' : ''} onClick={() => setTab('fin')}>بوابة المحاسب</button>
               <button className={tab === 'own' ? 'on' : ''} onClick={() => setTab('own')}>بوابة المدير</button>
             </div>
-            {tab === 'emp' ? (
-              <form onSubmit={(e) => { e.preventDefault(); login(staffEmailCandidates(f.user)) }}>
+            {tab === 'ten' ? (
+              <form onSubmit={loginTenant}>
+                <div className="auth-note" style={{ marginBottom: 12, fontSize: 13, color: '#6b6b6b' }}>
+                  ادخل بيانات بوابتك الخاصة التي وصلتك من المنشأة عند استلام الوحدة.
+                </div>
                 <div className="fld"><label>اسم المستخدم</label>
-                  <input value={f.user} autoFocus autoComplete="username" onChange={e => setF({ ...f, user: e.target.value })} placeholder="ahmad.s" dir="ltr" /></div>
-                <div className="fld"><label>كلمة المرور</label>
+                  <input value={tenantF.user} autoFocus autoComplete="username" onChange={e => setTenantF({ ...tenantF, user: e.target.value })} dir="ltr" /></div>
+                <div className="fld"><label>رمز الدخول (كلمة المرور)</label>
                   <div style={{ position: 'relative' }}>
-                    <input type={showPass ? 'text' : 'password'} autoComplete="current-password" value={f.pass} onChange={e => setF({ ...f, pass: e.target.value })} />
+                    <input type={showPass ? 'text' : 'password'} autoComplete="current-password" value={tenantF.token} onChange={e => setTenantF({ ...tenantF, token: e.target.value })} dir="ltr" />
                     <button type="button" onClick={() => setShowPass(v => !v)} className="pass-eye">{showPass ? 'إخفاء' : 'إظهار'}</button>
                   </div>
                 </div>
-                <button type="submit" className="btn btn-green" style={{ width: '100%' }} disabled={busy}>
-                  {busy ? 'جارٍ الدخول…' : 'دخول بوابة الموظف'}
+                <button type="submit" className="btn btn-gold" style={{ width: '100%' }} disabled={busy}>
+                  {busy ? 'جارٍ التحقق…' : '🔑 دخول بوابة المستأجر'}
                 </button>
               </form>
-            ) : (
+            ) : tab === 'own' ? (
               <form onSubmit={(e) => { e.preventDefault(); login(f.email) }}>
                 <div className="fld"><label>البريد الإلكتروني</label>
                   <input type="email" autoFocus autoComplete="email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} dir="ltr" /></div>
@@ -306,6 +325,20 @@ export default function Login({ onBack }) {
                   {busy ? 'جارٍ الدخول…' : 'دخول بوابة المدير'}
                 </button>
                 <button className="forgot-link" type="button" disabled={busy} onClick={() => { setForgot(true); setF({ ...f, resetEmail: f.email }) }}>نسيت كلمة السر؟</button>
+              </form>
+            ) : (
+              <form onSubmit={(e) => { e.preventDefault(); login(staffEmailCandidates(f.user)) }}>
+                <div className="fld"><label>اسم المستخدم</label>
+                  <input value={f.user} autoFocus autoComplete="username" onChange={e => setF({ ...f, user: e.target.value })} placeholder="ahmad.s" dir="ltr" /></div>
+                <div className="fld"><label>كلمة المرور</label>
+                  <div style={{ position: 'relative' }}>
+                    <input type={showPass ? 'text' : 'password'} autoComplete="current-password" value={f.pass} onChange={e => setF({ ...f, pass: e.target.value })} />
+                    <button type="button" onClick={() => setShowPass(v => !v)} className="pass-eye">{showPass ? 'إخفاء' : 'إظهار'}</button>
+                  </div>
+                </div>
+                <button type="submit" className="btn btn-green" style={{ width: '100%' }} disabled={busy}>
+                  {busy ? 'جارٍ الدخول…' : tab === 'fin' ? 'دخول بوابة المحاسب' : 'دخول بوابة موظف الاستقبال'}
+                </button>
               </form>
             )}
           </>)}

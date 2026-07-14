@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
 import { SAR, num, today } from '../lib/helpers'
 import { SkeletonKpis } from '../components/Skeleton'
-import HourlyPing from '../components/HourlyPing'
 
 /*
   الصفحة الرئيسية بعد تسجيل الدخول — تظهر حسب دور المستخدم:
@@ -154,7 +153,6 @@ export default function Home({ onNav }) {
 
       
 
-      <HourlyPing />
     </div>
   )
 }

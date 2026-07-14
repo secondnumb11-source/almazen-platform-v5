@@ -3,6 +3,7 @@ import { supabase, adminSignupClient, staffEmail, normalizeStaffUsername } from 
 import { useAuth } from '../AuthContext'
 import { uploadFile, ROLES } from '../lib/helpers'
 import UnitActivityPanel from '../components/UnitActivityPanel'
+import DataImport from '../components/DataImport'
 
 /* إعدادات الإيميلات والتكامل تُحفظ محلياً في هذا المتصفح لكل منشأة،
    وتُطبَّق فوراً على واجهة التطبيق (مثل رابط بوابة المستأجر ورقم الواتساب المُرسل).
@@ -49,7 +50,7 @@ export default function Settings() {
     setEditStaff({ ...s })
     setEditOriginal({ ...s })
     const p = perms[s.id] || {
-      staff_id: s.id, company_id: profile.company_id,
+      staff_id: s.id, user_id: s.id, company_id: profile.company_id,
       can_discount: false, discount_max_percent: 10,
       can_cancel_booking: false, can_edit_data: true,
       can_upload_media: true, can_view_accountant: false,
@@ -76,7 +77,7 @@ export default function Settings() {
     // حفظ الصلاحيات إن تغيّرت
     if (editPerms && JSON.stringify(editPerms) !== JSON.stringify(editPermsOriginal)) {
       const { error: pe } = await supabase.from('staff_permissions')
-        .upsert({ ...editPerms, updated_at: new Date().toISOString() }, { onConflict: 'staff_id' })
+        .upsert({ ...editPerms, user_id: editPerms.staff_id, updated_at: new Date().toISOString() }, { onConflict: 'staff_id' })
       if (pe) return toast('حُفظت البيانات، لكن فشلت الصلاحيات: ' + pe.message, true)
     }
     toast('✓ حُفظت بيانات الموظف والصلاحيات'); closeEdit(); loadStaff()
@@ -184,7 +185,7 @@ export default function Settings() {
       if (pe) throw pe
       // إنشاء صف افتراضي في staff_permissions
       await supabase.from('staff_permissions').insert({
-        staff_id: uid, company_id: profile.company_id,
+        staff_id: uid, user_id: uid, company_id: profile.company_id,
         can_discount: false, discount_max_percent: 10,
         can_cancel_booking: false, can_edit_data: true,
         can_upload_media: true, can_view_accountant: false,
@@ -198,11 +199,11 @@ export default function Settings() {
   }
 
   const updatePerm = async (staffId, patch) => {
-    const current = perms[staffId] || { staff_id: staffId, company_id: profile.company_id }
+    const current = perms[staffId] || { staff_id: staffId, user_id: staffId, company_id: profile.company_id }
     const next = { ...current, ...patch }
     setPerms(p => ({ ...p, [staffId]: next }))
     const { error } = await supabase.from('staff_permissions')
-      .upsert({ ...next, updated_at: new Date().toISOString() }, { onConflict: 'staff_id' })
+      .upsert({ ...next, user_id: next.staff_id, updated_at: new Date().toISOString() }, { onConflict: 'staff_id' })
     if (error) toast('خطأ في حفظ الصلاحية: ' + error.message, true)
     else toast('✓ حُفظت الصلاحية')
   }
@@ -213,6 +214,7 @@ export default function Settings() {
     { k: 'integ',   label: 'التكامل', icon: '🔌' },
     { k: 'staff',   label: 'الحسابات', icon: '👥' },
     { k: 'activity', label: 'نشاط وحدة', icon: '📋' },
+    { k: 'import',  label: 'استيراد بيانات', icon: '📥' },
   ]
 
   return (
@@ -371,6 +373,7 @@ export default function Settings() {
       )}
 
       {tab === 'activity' && <UnitActivityPanel />}
+      {tab === 'import' && <DataImport />}
 
       {editStaff && (() => {
         const changed = []

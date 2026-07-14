@@ -5,6 +5,9 @@ import { ROLES } from '../lib/helpers'
 const items = [
   { k: 'home', label: 'الرئيسية', icon: '🏠', roles: 'all' },
   { k: 'dash', label: 'إدارة الوحدات', icon: '🏢', roles: 'all' },
+  { k: 'customers', label: 'إدارة العملاء والمستأجرين', icon: '👥', roles: 'all' },
+  { k: 'ops', label: 'العمليات اليومية', icon: '🧰', roles: 'all' },
+  { k: 'staff', label: 'إدارة الموظفين', icon: '🧑‍💼', roles: 'finance' },
   { k: 'reports', label: 'بوابة المحاسب', icon: '📊', roles: 'finance' },
   { k: 'center', label: 'مركز التقارير والمراقبة', icon: '🛰️', roles: 'finance' },
   { k: 'ejar', label: 'التكامل مع منصة إيجار', icon: '🏛️', roles: 'finance', soon: true },
@@ -40,20 +43,22 @@ function SidebarClock({ collapsed }) {
 
   return (
     <div className="sb-clock">
-      <div className="sb-clock-time" dir="ltr">
-        <span className="sb-ampm">{ampm}</span>
-        <span>{h12}</span>
-        <span className="sb-colon">:</span>
-        <span>{mm}</span>
+      <div className="sb-clock-top">
+        <div className="sb-clock-time" dir="ltr">
+          <span className="sb-ampm">{ampm}</span>
+          <span>{h12}</span>
+          <span className="sb-colon">:</span>
+          <span>{mm}</span>
+        </div>
+        <button
+          className="sb-cal-toggle"
+          onClick={() => setHijri(h => !h)}
+          title={hijri ? 'التاريخ الميلادي' : 'التاريخ الهجري'}
+        >
+          {hijri ? '🗓' : '🌙'}
+        </button>
       </div>
       <div className="sb-clock-date">{dateStr}</div>
-      <button
-        className="sb-cal-toggle"
-        onClick={() => setHijri(h => !h)}
-        title={hijri ? 'التاريخ الميلادي' : 'التاريخ الهجري'}
-      >
-        {hijri ? '🗓 م' : '🌙 هـ'}
-      </button>
     </div>
   )
 }
@@ -84,6 +89,13 @@ export default function AppSidebar({ page, setPage, collapsed, onToggle }) {
       </div>
 
       <SidebarClock collapsed={collapsed} />
+
+      {collapsed && (
+        <button className="sb-expand-prompt" onClick={onToggle} title="فتح لوحة التحكم">
+          <span className="sb-expand-icon">«</span>
+          <span className="sb-expand-lbl">فتح</span>
+        </button>
+      )}
 
       <nav className="sb-nav">
         {visible.map(it => (

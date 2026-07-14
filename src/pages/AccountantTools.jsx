@@ -28,6 +28,8 @@ function emitReport(fmt, filename, title, sheets, filters, company) {
 export default function AccountantTools() {
   const { profile, company, toast } = useAuth()
   const [units, setUnits] = useState([])
+  const [showAI, setShowAI] = useState(false)
+
   useEffect(() => {
     supabase.from('units').select('unit_number').eq('company_id', profile.company_id)
       .order('unit_number').then(({ data }) => setUnits(data || []))
@@ -35,15 +37,334 @@ export default function AccountantTools() {
 
   return (
     <>
-      <EmbeddedAssistant />
+      <div className="ai-toggle-bar">
+        <button className={'ai-toggle-btn' + (showAI ? ' open' : '')} onClick={() => setShowAI(v => !v)}>
+          <span className="ai-toggle-ico">🤖</span>
+          <span className="ai-toggle-lbl">المساعد الذكي للمحاسب</span>
+          <span className="ai-toggle-sub">اسأل بلغة طبيعية واحصل على تقارير وتحليلات فورية</span>
+          <span className="ai-toggle-arrow">{showAI ? '▲' : '▼'}</span>
+        </button>
+        <div className={'ai-toggle-body' + (showAI ? ' open' : '')}>
+          <EmbeddedAssistant />
+        </div>
+      </div>
       <ReportBuilder units={units} />
       <div className="tools-grid">
         <VatReportTool />
         <CashFlowTool />
         <AgingBucketsTool />
         <PeriodComparisonTool />
+        <BalanceSheetTool />
+        <IncomeStatementTool />
+        <VouchersGroupedTool />
+        <ExpensesGroupedTool />
+        <UnitPricingListTool units={units} />
+        <AttachmentsTool />
       </div>
     </>
+  )
+}
+
+/* ================= الميزانية العمومية (مهم جداً) ================= */
+function BalanceSheetTool() {
+  const { profile, company, toast } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [asOf, setAsOf] = useState(today())
+  const [rows, setRows] = useState(null)
+
+  const load = async () => {
+    const { data, error } = await supabase.rpc('balance_sheet', { p_company_id: profile.company_id, p_as_of: asOf })
+    if (error) { toast('خطأ: ' + error.message, true); return null }
+    return data || []
+  }
+
+  const view = async () => { setBusy(true); setRows(await load()); setBusy(false) }
+
+  const run = async (fmt) => {
+    setBusy(true)
+    try {
+      const data = await load()
+      if (!data) return
+      const bySection = { 'الأصول': [], 'الخصوم': [], 'حقوق الملكية': [] }
+      for (const r of data) bySection[r.section]?.push({ 'الرمز': r.code, 'الحساب': r.name, 'الرصيد': num(r.balance) })
+      const totalAssets = bySection['الأصول'].reduce((s, r) => s + r['الرصيد'], 0)
+      const totalLiabEquity = [...bySection['الخصوم'], ...bySection['حقوق الملكية']].reduce((s, r) => s + r['الرصيد'], 0)
+      const sheets = [
+        { name: 'الأصول', rows: bySection['الأصول'], numeric: ['الرصيد'] },
+        { name: 'الخصوم', rows: bySection['الخصوم'], numeric: ['الرصيد'] },
+        { name: 'حقوق الملكية', rows: bySection['حقوق الملكية'], numeric: ['الرصيد'] },
+        { name: 'ملخص التوازن', rows: [
+          { 'البند': 'إجمالي الأصول', 'القيمة': totalAssets },
+          { 'البند': 'إجمالي الخصوم وحقوق الملكية', 'القيمة': totalLiabEquity },
+          { 'البند': 'الفرق (يجب أن يكون صفراً)', 'القيمة': Math.round((totalAssets - totalLiabEquity) * 100) / 100 }
+        ], numeric: ['القيمة'] }
+      ]
+      emitReport(fmt, `الميزانية-العمومية-${asOf}`, 'الميزانية العمومية', sheets, { 'كما في تاريخ': asOf }, company)
+      toast(`✓ صدرت الميزانية العمومية — إجمالي الأصول ${SAR(totalAssets)}`)
+    } catch (e) { toast('خطأ: ' + e.message, true) } finally { setBusy(false) }
+  }
+
+  const totalAssets = rows?.filter(r => r.section === 'الأصول').reduce((s, r) => s + num(r.balance), 0) || 0
+  const totalOther = rows?.filter(r => r.section !== 'الأصول').reduce((s, r) => s + num(r.balance), 0) || 0
+
+  return (
+    <div className="tool-card">
+      <h4>⚖️ الميزانية العمومية</h4>
+      <div className="desc">الأصول = الخصوم + حقوق الملكية — مبنية مباشرة من شجرة الحسابات والقيود الفعلية.</div>
+      <div><label>كما في تاريخ</label><input type="date" value={asOf} onChange={e => setAsOf(e.target.value)} /></div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+        <button className="btn btn-ghost btn-sm" disabled={busy} onClick={view}>👁 عرض</button>
+        <button className="btn btn-gold btn-sm" disabled={busy} onClick={() => run('xlsx')}>📗 Excel</button>
+        <button className="btn btn-blue btn-sm" disabled={busy} onClick={() => run('pdf')}>📄 PDF</button>
+      </div>
+      {rows && (
+        <div style={{ marginTop: 10, fontSize: 13 }}>
+          {['الأصول', 'الخصوم', 'حقوق الملكية'].map(sec => (
+            <div key={sec} style={{ marginBottom: 8 }}>
+              <b>{sec}</b>
+              <table className="tbl">
+                <tbody>
+                  {rows.filter(r => r.section === sec).map(r => (
+                    <tr key={r.code}><td dir="ltr">{r.code}</td><td>{r.name}</td><td className="money">{SAR(r.balance)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+          <div style={{ fontWeight: 800 }}>
+            إجمالي الأصول: <span className="money">{SAR(totalAssets)}</span> — إجمالي الخصوم وحقوق الملكية: <span className="money">{SAR(totalOther)}</span>
+            {Math.abs(totalAssets - totalOther) < 0.5 ? <span style={{ color: 'var(--green)' }}> ✓ متوازنة</span> : <span className="neg"> ⚠ غير متوازنة</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ================= قائمة الدخل (الأرباح والخسائر) ================= */
+function IncomeStatementTool() {
+  const { profile, company, toast } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [range, setRange] = useState({ from: today().slice(0, 8) + '01', to: today() })
+
+  const run = async (fmt) => {
+    setBusy(true)
+    try {
+      const { data, error } = await supabase.rpc('income_statement', { p_company_id: profile.company_id, p_from: range.from, p_to: range.to })
+      if (error) return toast('خطأ: ' + error.message, true)
+      const rev = (data || []).filter(r => r.section === 'الإيرادات')
+      const exp = (data || []).filter(r => r.section === 'المصروفات')
+      const totalRev = rev.reduce((s, r) => s + num(r.amount), 0)
+      const totalExp = exp.reduce((s, r) => s + num(r.amount), 0)
+      const sheets = [
+        { name: 'الإيرادات', rows: rev.map(r => ({ 'الرمز': r.code, 'الحساب': r.name, 'المبلغ': num(r.amount) })), numeric: ['المبلغ'] },
+        { name: 'المصروفات', rows: exp.map(r => ({ 'الرمز': r.code, 'الحساب': r.name, 'المبلغ': num(r.amount) })), numeric: ['المبلغ'] },
+        { name: 'الملخص', rows: [
+          { 'البند': 'إجمالي الإيرادات', 'القيمة': totalRev },
+          { 'البند': 'إجمالي المصروفات', 'القيمة': totalExp },
+          { 'البند': 'صافي الربح / الخسارة', 'القيمة': totalRev - totalExp }
+        ], numeric: ['القيمة'] }
+      ]
+      emitReport(fmt, `قائمة-الدخل-${range.from}-${range.to}`, 'قائمة الدخل (الأرباح والخسائر)', sheets, { 'من': range.from, 'إلى': range.to }, company)
+      toast(`✓ صدرت قائمة الدخل — صافي ${SAR(totalRev - totalExp)}`)
+    } catch (e) { toast('خطأ: ' + e.message, true) } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="tool-card">
+      <h4>📉 قائمة الدخل — الأرباح والخسائر</h4>
+      <div className="desc">إجمالي الإيرادات ناقص إجمالي المصروفات حسب شجرة الحسابات لفترة محددة.</div>
+      <div className="grid2" style={{ marginBottom: 8 }}>
+        <div><label>من</label><input type="date" value={range.from} onChange={e => setRange({ ...range, from: e.target.value })} /></div>
+        <div><label>إلى</label><input type="date" value={range.to} onChange={e => setRange({ ...range, to: e.target.value })} /></div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button className="btn btn-gold btn-sm" disabled={busy} onClick={() => run('xlsx')}>📗 Excel</button>
+        <button className="btn btn-blue btn-sm" disabled={busy} onClick={() => run('pdf')}>📄 PDF</button>
+      </div>
+    </div>
+  )
+}
+
+/* ================= تقرير السندات المجمّع (حسب الجهة/الفئة) ================= */
+function VouchersGroupedTool() {
+  const { profile, company, toast } = useAuth()
+  const [type, setType] = useState('receipt')
+  const [busy, setBusy] = useState(false)
+  const [range, setRange] = useState({ from: today().slice(0, 8) + '01', to: today() })
+
+  const run = async (fmt) => {
+    setBusy(true)
+    try {
+      const { data, error } = await supabase.rpc('vouchers_summary', {
+        p_company_id: profile.company_id, p_voucher_type: type, p_from: range.from, p_to: range.to
+      })
+      if (error) return toast('خطأ: ' + error.message, true)
+      const PL = { tenant: 'مستأجر', vendor: 'مورد', employee: 'موظف', other: 'أخرى' }
+      const rows = (data || []).map(r => ({ 'الجهة': r.party_name, 'التصنيف': PL[r.party_type] || r.party_type, 'عدد السندات': Number(r.voucher_count), 'الإجمالي': num(r.total_amount) }))
+      const total = rows.reduce((s, r) => s + r['الإجمالي'], 0)
+      emitReport(fmt, `تقرير-${type === 'receipt' ? 'سندات-القبض' : 'سندات-الصرف'}-${range.from}-${range.to}`,
+        type === 'receipt' ? 'تقرير سندات القبض المجمّع' : 'تقرير سندات الصرف المجمّع',
+        [{ name: 'التجميع', rows, numeric: ['عدد السندات', 'الإجمالي'] }],
+        { 'من': range.from, 'إلى': range.to }, company)
+      toast(`✓ صدر التقرير — إجمالي ${SAR(total)} عبر ${rows.length} جهة`)
+    } catch (e) { toast('خطأ: ' + e.message, true) } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="tool-card">
+      <h4>🧾 تقرير السندات المجمّع</h4>
+      <div className="desc">سندات القبض أو الصرف مجمّعة حسب الجهة (مستأجر/مورد/موظف) لفترة محددة.</div>
+      <div className="grid3" style={{ marginBottom: 8 }}>
+        <div><label>النوع</label>
+          <select value={type} onChange={e => setType(e.target.value)}>
+            <option value="receipt">سندات القبض</option><option value="payment">سندات الصرف</option>
+          </select></div>
+        <div><label>من</label><input type="date" value={range.from} onChange={e => setRange({ ...range, from: e.target.value })} /></div>
+        <div><label>إلى</label><input type="date" value={range.to} onChange={e => setRange({ ...range, to: e.target.value })} /></div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button className="btn btn-gold btn-sm" disabled={busy} onClick={() => run('xlsx')}>📗 Excel</button>
+        <button className="btn btn-blue btn-sm" disabled={busy} onClick={() => run('pdf')}>📄 PDF</button>
+      </div>
+    </div>
+  )
+}
+
+/* ================= تقرير المصروفات المجمّع (حسب البائع/النوع/الوحدة) ================= */
+function ExpensesGroupedTool() {
+  const { profile, company, toast } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [range, setRange] = useState({ from: today().slice(0, 8) + '01', to: today() })
+  const EC = { electricity: 'كهرباء', water: 'ماء', maintenance: 'صيانة', salaries: 'رواتب', cleaning: 'نظافة', internet: 'إنترنت', other: 'أخرى' }
+
+  const run = async (fmt) => {
+    setBusy(true)
+    try {
+      const { data } = await supabase.from('expenses')
+        .select('category, vendor_name, amount, units(unit_number)')
+        .eq('company_id', profile.company_id).gte('expense_date', range.from).lte('expense_date', range.to)
+      const byCat = {}, byVendor = {}
+      for (const e of data || []) {
+        const c = EC[e.category] || e.category
+        byCat[c] = (byCat[c] || 0) + num(e.amount)
+        const v = e.vendor_name || '—'
+        byVendor[v] = (byVendor[v] || 0) + num(e.amount)
+      }
+      const rowsCat = Object.entries(byCat).map(([k, v]) => ({ 'التصنيف': k, 'الإجمالي': v }))
+      const rowsVendor = Object.entries(byVendor).map(([k, v]) => ({ 'البائع/المورد': k, 'الإجمالي': v }))
+      const total = rowsCat.reduce((s, r) => s + r['الإجمالي'], 0)
+      emitReport(fmt, `تقرير-المصروفات-المجمع-${range.from}-${range.to}`, 'تقرير المصروفات المجمّع',
+        [
+          { name: 'حسب التصنيف', rows: rowsCat, numeric: ['الإجمالي'] },
+          { name: 'حسب البائع', rows: rowsVendor, numeric: ['الإجمالي'] }
+        ], { 'من': range.from, 'إلى': range.to }, company)
+      toast(`✓ صدر تقرير المصروفات — إجمالي ${SAR(total)}`)
+    } catch (e) { toast('خطأ: ' + e.message, true) } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="tool-card">
+      <h4>💸 تقرير المصروفات المجمّع</h4>
+      <div className="desc">مجمّع حسب التصنيف والبائع/المورد لفترة محددة — لتحليل بنود الصرف.</div>
+      <div className="grid2" style={{ marginBottom: 8 }}>
+        <div><label>من</label><input type="date" value={range.from} onChange={e => setRange({ ...range, from: e.target.value })} /></div>
+        <div><label>إلى</label><input type="date" value={range.to} onChange={e => setRange({ ...range, to: e.target.value })} /></div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button className="btn btn-gold btn-sm" disabled={busy} onClick={() => run('xlsx')}>📗 Excel</button>
+        <button className="btn btn-blue btn-sm" disabled={busy} onClick={() => run('pdf')}>📄 PDF</button>
+      </div>
+    </div>
+  )
+}
+
+/* ================= قائمة أسعار الوحدات (يومي/شهري/سنوي) ================= */
+function UnitPricingListTool() {
+  const { profile, company, toast } = useAuth()
+  const [busy, setBusy] = useState(false)
+
+  const run = async (fmt) => {
+    setBusy(true)
+    try {
+      const { data } = await supabase.from('units')
+        .select('unit_number, category, daily_price, monthly_price, yearly_price, status')
+        .eq('company_id', profile.company_id).order('unit_number')
+      const CATS = { apartment: 'شقة سكنية', chalet: 'شاليه', furnished_unit: 'وحدة مفروشة', hotel_room: 'غرفة فندقية' }
+      const ST = { available: 'متاح', reserved: 'محجوز', occupied: 'مسكون', cleaning: 'تنظيف', maintenance: 'صيانة' }
+      const rows = (data || []).map(u => ({
+        'الوحدة': u.unit_number, 'الفئة': CATS[u.category] || u.category, 'الحالة': ST[u.status] || u.status,
+        'السعر اليومي': num(u.daily_price), 'السعر الشهري': num(u.monthly_price), 'السعر السنوي': num(u.yearly_price)
+      }))
+      emitReport(fmt, `قائمة-أسعار-الوحدات-${today()}`, 'قائمة أسعار الوحدات السكنية',
+        [{ name: 'الأسعار', rows, numeric: ['السعر اليومي', 'السعر الشهري', 'السعر السنوي'] }], {}, company)
+      toast(`✓ صدرت قائمة الأسعار — ${rows.length} وحدة`)
+    } catch (e) { toast('خطأ: ' + e.message, true) } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="tool-card">
+      <h4>🏷️ قائمة أسعار الوحدات</h4>
+      <div className="desc">كل الوحدات بأسعارها اليومية والشهرية والسنوية — جاهزة للمشاركة مع العملاء أو الأرشفة.</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button className="btn btn-gold btn-sm" disabled={busy} onClick={() => run('xlsx')}>📗 Excel</button>
+        <button className="btn btn-blue btn-sm" disabled={busy} onClick={() => run('pdf')}>📄 PDF</button>
+      </div>
+    </div>
+  )
+}
+
+/* ================= مركز المرفقات — للمحاسب فقط ================= */
+function AttachmentsTool() {
+  const { profile, toast } = useAuth()
+  const [kind, setKind] = useState('ids')
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  const load = async (k) => {
+    setLoading(true)
+    const cid = profile.company_id
+    if (k === 'ids') {
+      const { data } = await supabase.from('customers').select('full_name, id_number, id_document_url, phone')
+        .eq('company_id', cid).not('id_document_url', 'is', null)
+      setRows((data || []).map(c => ({ label: c.full_name, sub: c.id_number, url: c.id_document_url })))
+    } else if (k === 'payment_proofs') {
+      const { data } = await supabase.from('payments').select('amount, payment_date, document_url, bookings(customers(full_name))')
+        .eq('company_id', cid).not('document_url', 'is', null).order('payment_date', { ascending: false })
+      setRows((data || []).map(p => ({ label: p.bookings?.customers?.full_name || 'مستأجر', sub: `${p.payment_date} — ${SAR(p.amount)}`, url: p.document_url })))
+    } else if (k === 'invoices') {
+      const { data } = await supabase.from('expenses').select('description, vendor_name, expense_date, amount, invoice_url')
+        .eq('company_id', cid).not('invoice_url', 'is', null).order('expense_date', { ascending: false })
+      setRows((data || []).map(e => ({ label: e.vendor_name || e.description || 'مصروف', sub: `${e.expense_date} — ${SAR(e.amount)}`, url: e.invoice_url })))
+    }
+    setLoading(false)
+  }
+  useEffect(() => { load(kind) }, [kind, profile])
+
+  return (
+    <div className="tool-card" style={{ gridColumn: '1 / -1' }}>
+      <h4>📎 مركز المرفقات — إيصالات، هويات، فواتير</h4>
+      <div className="desc">كل المرفقات التي أدخلها الموظفون عند الحجز أو تسجيل المصروفات، في مكان واحد للمراجعة.</div>
+      <div className="acc-tabs" style={{ marginBottom: 10 }}>
+        <button className={kind === 'ids' ? 'on' : ''} onClick={() => setKind('ids')}>🪪 صور الهويات</button>
+        <button className={kind === 'payment_proofs' ? 'on' : ''} onClick={() => setKind('payment_proofs')}>🧾 إيصالات السداد</button>
+        <button className={kind === 'invoices' ? 'on' : ''} onClick={() => setKind('invoices')}>📄 فواتير المصروفات</button>
+      </div>
+      {loading ? <p style={{ color: 'var(--muted)' }}>جارٍ التحميل…</p> : (
+        <table className="tbl">
+          <thead><tr><th>الجهة</th><th>التفاصيل</th><th></th></tr></thead>
+          <tbody>
+            {rows.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد مرفقات من هذا النوع بعد</td></tr>}
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td>{r.label}</td><td>{r.sub}</td>
+                <td><a className="btn btn-ghost btn-sm" href={r.url} target="_blank" rel="noreferrer">🔍 عرض</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   )
 }
 
@@ -101,12 +422,7 @@ function EmbeddedAssistant() {
 
   return (
     <div className="ai-embedded panel">
-      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 18 }}>🤖</span>
-        <b style={{ color: 'var(--green)', fontSize: 14 }}>المساعد الذكي للمحاسب</b>
-        <span style={{ color: 'var(--muted)', fontSize: 12 }}>اسأل بلغة طبيعية واحصل على أي تقرير أو تحليل</span>
-      </div>
-      <div className="ai-box" style={{ height: 340 }}>
+      <div className="ai-box" style={{ height: 380 }}>
         <div className="ai-msgs" ref={box}>
           {messages.length === 0 && (
             <div className="msg a">

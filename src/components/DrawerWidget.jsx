@@ -68,6 +68,11 @@ export default function DrawerWidget() {
 
   return (
     <div className="drawer-widget">
+      <button className={'drawer-handle' + (open ? ' open' : '')} onClick={() => setOpen(o => !o)} title="ملاحظات · تاريخ">
+        <span className="dh-icon">{open ? '◀' : '▶'}</span>
+        <span className="dh-text">ملاحظات · محول التاريخ</span>
+      </button>
+
       <div className={'drawer-body' + (open ? ' open' : '')}>
         <div className="drawer-inner">
           <div className="drawer-tabs">
@@ -116,11 +121,6 @@ export default function DrawerWidget() {
           )}
         </div>
       </div>
-
-      <button className={'drawer-handle' + (open ? ' open' : '')} onClick={() => setOpen(o => !o)}>
-        <span className="dh-icon">⬆</span>
-        <span>ملاحظات · تاريخ</span>
-      </button>
     </div>
   )
 }

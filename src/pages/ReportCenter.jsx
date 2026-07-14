@@ -382,7 +382,11 @@ function ActivityMonitor() {
     return () => supabase.removeChannel(ch)
   }, [profile])
 
-  // الاشتراك في Realtime Presence لمعرفة الموظفين المتصلين حالياً وصفحاتهم
+  // الاشتراك في Realtime Presence لمعرفة الموظفين المتصلين حالياً وصفحاتهم.
+  // نفس اسم القناة يُستخدم أيضاً في App.jsx (Shell) لبث حضور كل المستخدمين —
+  // realtime-js يُعيد نفس كائن القناة لنفس الاسم، ولا يمكن استدعاء .on() بعد
+  // أن أصبحت مُشتركة (subscribed) بالفعل من Shell. لذا: إن كانت القناة مُشتركة
+  // مسبقاً نكتفي بقراءة حالتها دورياً بدل محاولة اشتراك جديد يُسبب انهياراً.
   useEffect(() => {
     if (!profile) return
     const ch = supabase.channel(`presence:${profile.company_id}`, {
@@ -392,6 +396,11 @@ function ActivityMonitor() {
       const state = ch.presenceState()
       const list = Object.values(state).flat()
       setPresence(list)
+    }
+    if (ch.state === 'joined') {
+      sync()
+      const t = setInterval(sync, 4000)
+      return () => clearInterval(t)
     }
     ch.on('presence', { event: 'sync' }, sync)
     ch.subscribe(async (status) => {
@@ -406,7 +415,8 @@ function ActivityMonitor() {
         sync()
       }
     })
-    return () => { supabase.removeChannel(ch) }
+    // لا نُزيل القناة هنا — فقد تكون نفس القناة المشتركة مع Shell في App.jsx
+    return () => {}
   }, [profile])
 
   const isSensitive = (l) => l.new_data?.sensitive === true || SENSITIVE_KINDS.has(l.action)

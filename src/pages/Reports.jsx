@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
-import { SAR, num, today, exportCSV, CATS, STATUS } from '../lib/helpers'
+import { SAR, num, today, exportCSV, CATS, STATUS, uploadFile } from '../lib/helpers'
 import { exportFullAccounts, fetchBookingsRows, fetchTenantsRows, fetchPaymentsRows, downloadWorkbook } from '../lib/excel'
 import AdvancedAnalytics from './AdvancedAnalytics'
 import ReceiptOCR from './ReceiptOCR'
 import AccountantTools from './AccountantTools'
+import AccountingCore from './AccountingCore'
 import DiscountApprovals from '../components/DiscountApprovals'
 import EjarPanel from './EjarPanel'
 
@@ -82,6 +83,7 @@ export default function Reports() {
       </div>
 
       <AccountantTools />
+      <AccountingCore />
       <EjarPanel />
       <DiscountApprovals />
       <ExtractionTools />
@@ -147,24 +149,39 @@ export default function Reports() {
   )
 }
 
-/* تسجيل المصروفات (كهرباء، ماء، صيانة، رواتب) لكل وحدة */
+/* تسجيل المصروفات (كهرباء، ماء، صيانة، رواتب) لكل وحدة — مربوطة بشجرة الحسابات
+   وتُصدر تلقائياً قيداً محاسبياً وسند صرف عند الحفظ (عبر trigger في القاعدة) */
 function ExpenseEntry() {
   const { profile, toast } = useAuth()
   const [units, setUnits] = useState([])
-  const [e, setE] = useState({ unit_id: '', category: 'electricity', amount: '', description: '' })
+  const [cashAccounts, setCashAccounts] = useState([])
+  const [e, setE] = useState({ unit_id: '', category: 'electricity', amount: '', description: '', vendor_name: '', payment_method: 'cash', paid_from_account_id: '' })
+  const [file, setFile] = useState(null)
+  const [saving, setSaving] = useState(false)
+
   useEffect(() => {
     supabase.from('units').select('id, unit_number').eq('company_id', profile.company_id)
       .then(({ data }) => setUnits(data || []))
+    supabase.rpc('chart_of_accounts_with_balances', { p_company_id: profile.company_id })
+      .then(({ data }) => setCashAccounts((data || []).filter(a => a.account_type === 'asset' && !a.is_group && (a.code === '1101' || a.code === '1102'))))
   }, [profile])
+
   const save = async () => {
     if (!num(e.amount)) return toast('أدخل المبلغ', true)
+    setSaving(true)
+    const invoice_url = file ? await uploadFile(supabase, 'documents', profile.company_id, file) : null
     const { error } = await supabase.from('expenses').insert({
       company_id: profile.company_id, unit_id: e.unit_id || null,
-      category: e.category, amount: num(e.amount), description: e.description, created_by: profile.id
+      category: e.category, amount: num(e.amount), description: e.description,
+      vendor_name: e.vendor_name || null, payment_method: e.payment_method,
+      paid_from_account_id: e.paid_from_account_id || null,
+      invoice_url, created_by: profile.id
     })
+    setSaving(false)
     if (error) return toast('خطأ: ' + error.message, true)
-    toast('✓ سُجل المصروف — سيُحتسب في صافي الربح')
-    setE({ unit_id: '', category: 'electricity', amount: '', description: '' })
+    toast('✓ سُجل المصروف مع قيد محاسبي وسند صرف تلقائي')
+    setE({ unit_id: '', category: 'electricity', amount: '', description: '', vendor_name: '', payment_method: 'cash', paid_from_account_id: '' })
+    setFile(null)
   }
   return (
     <div className="panel" style={{ gridColumn: '1 / -1' }}><h3>تسجيل مصروف (لحساب صافي الربح الفعلي)</h3>
@@ -178,12 +195,25 @@ function ExpenseEntry() {
           <select value={e.category} onChange={ev => setE({ ...e, category: ev.target.value })}>
             <option value="electricity">كهرباء</option><option value="water">ماء</option>
             <option value="maintenance">صيانة</option><option value="salaries">رواتب</option>
-            <option value="cleaning">نظافة</option><option value="other">أخرى</option>
+            <option value="cleaning">نظافة</option><option value="internet">إنترنت</option><option value="other">أخرى</option>
           </select></div>
         <div><label>المبلغ (ر.س)</label><input type="number" value={e.amount} onChange={ev => setE({ ...e, amount: ev.target.value })} /></div>
+        <div><label>البائع / المورد</label>
+          <input value={e.vendor_name} onChange={ev => setE({ ...e, vendor_name: ev.target.value })} placeholder="اسم البائع أو المورد" /></div>
+        <div><label>طريقة الدفع</label>
+          <select value={e.payment_method} onChange={ev => setE({ ...e, payment_method: ev.target.value })}>
+            <option value="cash">كاش</option><option value="bank_transfer">تحويل بنكي</option><option value="card">بطاقة بنكية</option>
+          </select></div>
+        <div><label>الصرف من حساب</label>
+          <select value={e.paid_from_account_id} onChange={ev => setE({ ...e, paid_from_account_id: ev.target.value })}>
+            <option value="">افتراضي (الصندوق)</option>
+            {cashAccounts.map(a => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+          </select></div>
         <div style={{ gridColumn: '1 / span 2' }}><label>الوصف</label>
           <input value={e.description} onChange={ev => setE({ ...e, description: ev.target.value })} /></div>
-        <div style={{ alignSelf: 'end' }}><button className="btn btn-green btn-sm" onClick={save}>حفظ المصروف</button></div>
+        <div><label>إرفاق الفاتورة</label>
+          <input type="file" accept="image/*,.pdf" onChange={ev => setFile(ev.target.files?.[0] || null)} /></div>
+        <div style={{ alignSelf: 'end' }}><button className="btn btn-green btn-sm" disabled={saving} onClick={save}>{saving ? '…جارٍ الحفظ' : 'حفظ المصروف'}</button></div>
       </div>
     </div>
   )

@@ -23,28 +23,28 @@ function SidebarClock({ collapsed }) {
     return () => clearInterval(t)
   }, [])
 
-  const hh = pad(now.getHours())
+  const h24 = now.getHours()
+  const h12 = pad(h24 % 12 || 12)
   const mm = pad(now.getMinutes())
-  const ss = pad(now.getSeconds())
+  const ampm = h24 < 12 ? 'ص' : 'م'
 
   const dateStr = hijri
     ? now.toLocaleDateString('ar-SA-u-ca-islamic', { year: 'numeric', month: 'short', day: 'numeric' })
     : now.toLocaleDateString('ar-SA', { weekday: 'short', day: 'numeric', month: 'short' })
 
   if (collapsed) return (
-    <div className="sb-clock-mini" title={`${hh}:${mm}`}>
+    <div className="sb-clock-mini" title={`${h12}:${mm} ${ampm}`}>
       <span className="sb-clock-dot" />
     </div>
   )
 
   return (
     <div className="sb-clock">
-      <div className="sb-clock-time">
-        <span>{hh}</span>
+      <div className="sb-clock-time" dir="ltr">
+        <span className="sb-ampm">{ampm}</span>
+        <span>{h12}</span>
         <span className="sb-colon">:</span>
         <span>{mm}</span>
-        <span className="sb-colon">:</span>
-        <span className="sb-sec">{ss}</span>
       </div>
       <div className="sb-clock-date">{dateStr}</div>
       <button

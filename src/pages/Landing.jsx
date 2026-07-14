@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import almazenLogo from '../assets/almazen-logo.png.asset.json'
+import almazenLogo from '../assets/almazen-logo.png'
 
 /* صور فندقية مجانية الاستخدام من Unsplash — تتحرك بتأثير Ken Burns
    وعند عدم توفر الإنترنت تظهر خلفية زرقاء فاخرة بديلة */
@@ -67,7 +67,7 @@ export default function Landing({ onLogin }) {
               e.currentTarget.style.setProperty('--ry', '0deg')
             }}>
             <span className="brand-logo-wrap" aria-hidden="false">
-              <img src={almazenLogo.url} alt="شعار منصة المازن" className="brand-logo-img" />
+              <img src={almazenLogo} alt="شعار منصة المازن" className="brand-logo-img" />
             </span>
             <span className="brand-text" data-text="منصة المازن">منصة المازن</span>
             <span className="brand-glow" aria-hidden="true"></span>

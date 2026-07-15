@@ -747,6 +747,20 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 .contract-grid b{font-size:11px;color:var(--muted);font-weight:700}
 .contract-grid span{font-size:14px;font-weight:700;color:var(--blue-2)}
 .contract-note{font-size:11.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px;margin:18px 0 22px;line-height:1.7}
+.contract-terms{margin:6px 0 18px;padding-inline-start:20px;font-size:12.5px;line-height:1.9;color:var(--blue-2)}
+.contract-terms li{margin-bottom:6px}
+
+/* صندوق تحليل المساعد الذكي */
+.ai-insight-box{background:linear-gradient(135deg,#eef4ff,#f5f0ff);border:1px solid #c9d4f0;border-radius:12px;padding:12px 16px;font-size:13px;line-height:1.7;color:var(--blue-2);margin-bottom:8px}
+@media (prefers-color-scheme: dark){.ai-insight-box{background:rgba(80,110,200,.12)}}
+
+/* رسم أداء الموظف الشريطي */
+.perf-chart{display:flex;flex-direction:column;gap:10px}
+.perf-row{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.perf-lbl{flex:0 0 170px;color:var(--blue-2);font-weight:700}
+.perf-track{flex:1;height:12px;background:var(--soft);border-radius:8px;overflow:hidden}
+.perf-fill{height:100%;border-radius:8px;transition:width .5s}
+.perf-val{flex:0 0 42px;text-align:left;font-weight:800;color:var(--blue-2)}
 @media print{
   .contract-doc{border:none;padding:0;background:none}
 }

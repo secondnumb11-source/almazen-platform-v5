@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import HandoverModal from '../components/HandoverModal'
 import TenantSummary from '../components/TenantSummary'
 import RentalContract from '../components/RentalContract'
+import PrintableDoc, { DocGrid } from '../components/PrintableDoc'
 
 /* ============ الشاشة الرئيسية للوحدات ============ */
 export default function Units() {
@@ -15,6 +16,7 @@ export default function Units() {
   const [activeBk, setActiveBk] = useState({})   // unit_id -> {check_in_date, check_out_date}
   const [sel, setSel] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('units').select('*')
@@ -72,6 +74,7 @@ export default function Units() {
             <span><i style={{ background: 'var(--st-oc)' }} />مسكون</span>
             <span><i style={{ background: 'var(--st-cl)' }} />تنظيف/صيانة</span>
           </div>
+          <button className="btn btn-blue btn-sm" onClick={() => setReportOpen(true)}>📊 تقرير وحدة</button>
           {isOwner && <button className="btn btn-gold btn-sm" onClick={() => setAddOpen(true)}>+ إضافة وحدة</button>}
         </div>
       </div>
@@ -155,6 +158,125 @@ export default function Units() {
 
       {sel && <UnitModal unit={sel} onClose={() => { setSel(null); load() }} />}
       {addOpen && <UnitForm onClose={() => { setAddOpen(false); load() }} />}
+      {reportOpen && <UnitReport units={units} onClose={() => setReportOpen(false)} />}
+    </div>
+  )
+}
+
+/* ============ تقرير وحدة محددة — تاريخ التأجير والمصروفات والصيانة
+   والمدفوعات والإيرادات ونسبة الإشغال مع تحليل ذكي، قابل للطباعة ============ */
+function UnitReport({ units, onClose }) {
+  const { profile, company, toast } = useAuth()
+  const [unitId, setUnitId] = useState(units[0]?.id || '')
+  const [range, setRange] = useState({ from: today().slice(0, 4) + '-01-01', to: today() })
+  const [data, setData] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [showPrint, setShowPrint] = useState(false)
+
+  const run = async () => {
+    if (!unitId) return toast('اختر وحدة', true)
+    setBusy(true)
+    const { data: d, error } = await supabase.rpc('unit_full_report', { p_unit_id: unitId, p_from: range.from, p_to: range.to })
+    setBusy(false)
+    if (error) return toast('خطأ: ' + error.message, true)
+    setData(d)
+  }
+
+  const CATS_L = { apartment: 'شقة سكنية', chalet: 'شاليه', furnished_unit: 'وحدة مفروشة', hotel_room: 'غرفة فندقية' }
+  const occ = data?.occupancy
+  const net = data ? num(data.totals?.revenue) - num(data.totals?.expenses) : 0
+  // تحليل ذكي بلغة طبيعية بناءً على نسبة الإشغال
+  const aiInsight = occ ? (() => {
+    const r = occ.occupancy_rate
+    if (r >= 85) return `إشغال مرتفع جداً (${r}%) — الوحدة من الأصول عالية الأداء، ويُنصح بمراجعة السعر للأعلى لاستثمار الطلب القوي.`
+    if (r >= 60) return `إشغال جيد (${r}%) — أداء صحّي ومستقر، مع فرصة لرفع الإشغال عبر عروض في الفترات المنخفضة.`
+    if (r >= 30) return `إشغال متوسط (${r}%) — يُنصح بحملة تسويقية أو مراجعة السعر لتحسين معدل الإشغال.`
+    return `إشغال منخفض (${r}%) — الوحدة شاغرة معظم الفترة، يُنصح بخفض السعر مؤقتاً أو مراجعة حالتها وجاهزيتها.`
+  })() : ''
+
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ width: 'min(860px,100%)' }}>
+        <div className="modal-h"><h3>📊 تقرير وحدة</h3><button className="x" onClick={onClose}>✕</button></div>
+        <div className="modal-b">
+          <div className="grid3" style={{ marginBottom: 12 }}>
+            <div className="fld"><label>الوحدة</label>
+              <select value={unitId} onChange={e => setUnitId(e.target.value)}>
+                {units.map(u => <option key={u.id} value={u.id}>{u.unit_number}</option>)}
+              </select></div>
+            <div className="fld"><label>من تاريخ</label><input type="date" value={range.from} onChange={e => setRange({ ...range, from: e.target.value })} /></div>
+            <div className="fld"><label>إلى تاريخ</label><input type="date" value={range.to} onChange={e => setRange({ ...range, to: e.target.value })} /></div>
+          </div>
+          <button className="btn btn-gold btn-sm" disabled={busy} onClick={run}>{busy ? '…' : 'استخراج التقرير'}</button>
+
+          {data && (
+            <div style={{ marginTop: 16 }}>
+              <div className="kpis" style={{ marginBottom: 12 }}>
+                <div className="kpi"><div className="v">{occ.occupancy_rate}%</div><div className="l">نسبة الإشغال</div></div>
+                <div className="kpi"><div className="v">{occ.occupied_days}</div><div className="l">أيام إشغال</div></div>
+                <div className="kpi"><div className="v">{occ.vacant_days}</div><div className="l">أيام شغور</div></div>
+                <div className="kpi"><div className="v">{SAR(data.totals.revenue)}</div><div className="l">الإيرادات</div></div>
+                <div className="kpi"><div className="v">{SAR(data.totals.expenses)}</div><div className="l">المصروفات</div></div>
+                <div className="kpi"><div className="v" style={{ color: net >= 0 ? 'var(--green)' : 'var(--st-oc)' }}>{SAR(net)}</div><div className="l">صافي الربح</div></div>
+              </div>
+
+              <div className="ai-insight-box">🤖 <b>تحليل المساعد الذكي:</b> {aiInsight}</div>
+
+              <h4 className="ts-h4">سجل التأجير ({data.bookings.length})</h4>
+              <table className="tbl" style={{ marginBottom: 14 }}>
+                <thead><tr><th>المستأجر</th><th>من</th><th>إلى</th><th>النوع</th><th>الإجمالي</th><th>المدفوع</th></tr></thead>
+                <tbody>
+                  {data.bookings.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا يوجد</td></tr>}
+                  {data.bookings.map((b, i) => <tr key={i}><td>{b.customer_name || '—'}</td><td dir="ltr">{b.check_in_date}</td><td dir="ltr">{b.check_out_date}</td><td>{{ daily: 'يومي', monthly: 'شهري', yearly: 'سنوي' }[b.rent_period] || b.rent_period}</td><td className="money">{SAR(b.total_amount)}</td><td className="money">{SAR(b.paid)}</td></tr>)}
+                </tbody>
+              </table>
+
+              <h4 className="ts-h4">المصروفات والصيانة</h4>
+              <table className="tbl" style={{ marginBottom: 14 }}>
+                <thead><tr><th>التاريخ</th><th>النوع/الوصف</th><th>المبلغ</th></tr></thead>
+                <tbody>
+                  {data.expenses.length === 0 && data.maintenance.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا يوجد</td></tr>}
+                  {data.expenses.map((e, i) => <tr key={'e' + i}><td dir="ltr">{e.expense_date}</td><td>مصروف: {e.description || e.category}</td><td className="neg">{SAR(e.amount)}</td></tr>)}
+                  {data.maintenance.map((m, i) => <tr key={'m' + i}><td dir="ltr">{m.opened_at?.slice(0, 10)}</td><td>صيانة: {m.description || '—'}</td><td className="neg">{SAR(m.cost)}</td></tr>)}
+                </tbody>
+              </table>
+
+              <button className="btn btn-blue btn-sm" onClick={() => setShowPrint(true)}>🖨 طباعة التقرير بترويسة و QR</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showPrint && data && (
+        <PrintableDoc
+          company={company} title={`تقرير الوحدة ${data.unit.unit_number}`}
+          subtitle={`الفترة: ${range.from} إلى ${range.to}`}
+          docNumber={'UNIT-' + data.unit.unit_number}
+          qrValue={JSON.stringify({ unit: data.unit.unit_number, from: range.from, to: range.to, occ: occ.occupancy_rate })}
+          onClose={() => setShowPrint(false)}
+        >
+          <h4 className="contract-h4">بيانات الوحدة ومؤشرات الأداء</h4>
+          <DocGrid items={[
+            ['رقم الوحدة', data.unit.unit_number],
+            ['التصنيف', CATS_L[data.unit.category] || data.unit.category],
+            ['نسبة الإشغال', occ.occupancy_rate + '%'],
+            ['أيام الإشغال', occ.occupied_days + ' من ' + data.period.total_days],
+            ['أيام الشغور', occ.vacant_days],
+            ['الإيرادات', SAR(data.totals.revenue)],
+            ['المصروفات', SAR(data.totals.expenses)],
+            ['صافي الربح', SAR(net)],
+          ]} />
+          <div className="ai-insight-box" style={{ marginBottom: 14 }}>🤖 <b>تحليل المساعد الذكي:</b> {aiInsight}</div>
+          <h4 className="contract-h4">سجل التأجير</h4>
+          <table className="tbl">
+            <thead><tr><th>المستأجر</th><th>من</th><th>إلى</th><th>الإجمالي</th><th>المدفوع</th></tr></thead>
+            <tbody>
+              {data.bookings.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا يوجد</td></tr>}
+              {data.bookings.map((b, i) => <tr key={i}><td>{b.customer_name || '—'}</td><td dir="ltr">{b.check_in_date}</td><td dir="ltr">{b.check_out_date}</td><td className="money">{SAR(b.total_amount)}</td><td className="money">{SAR(b.paid)}</td></tr>)}
+            </tbody>
+          </table>
+        </PrintableDoc>
+      )}
     </div>
   )
 }
@@ -577,6 +699,23 @@ function BookingForm({ unit, active, onDone }) {
   const set = (k, v) => setF(x => ({ ...x, [k]: v }))
   const isCompany = f.customer_type === 'company'
 
+  // اختيار العميل: حالي أم جديد
+  const [custMode, setCustMode] = useState('new')          // 'new' | 'existing'
+  const [existingCustomers, setExistingCustomers] = useState([])
+  const [selectedCustomerId, setSelectedCustomerId] = useState('')
+
+  useEffect(() => {
+    supabase.from('customers').select('id, full_name, id_type, id_number, phone')
+      .eq('company_id', profile.company_id).order('full_name')
+      .then(({ data }) => setExistingCustomers(data || []))
+  }, [profile])
+
+  const pickExisting = (id) => {
+    setSelectedCustomerId(id)
+    const c = existingCustomers.find(x => x.id === id)
+    if (c) setF(x => ({ ...x, name: c.full_name || '', idType: c.id_type || 'national_id', idNumber: c.id_number || '', phone: c.phone || '' }))
+  }
+
   const basePrice = { daily: unit.daily_price, monthly: unit.monthly_price, yearly: unit.yearly_price }[f.period] || 0
   const gross = num(basePrice) * num(f.duration)
   const discountAmt = Math.round(gross * num(f.discount) / 100 * 100) / 100
@@ -750,6 +889,19 @@ function BookingForm({ unit, active, onDone }) {
   return (
     <div>
       <h4 style={{ marginBottom: 10 }}>١) بيانات المستأجر</h4>
+      <div className="acc-tabs" style={{ marginBottom: 12 }}>
+        <button type="button" className={custMode === 'new' ? 'on' : ''} onClick={() => { setCustMode('new'); setSelectedCustomerId(''); setF(x => ({ ...x, name: '', idNumber: '', phone: '' })) }}>🆕 عميل جديد</button>
+        <button type="button" className={custMode === 'existing' ? 'on' : ''} onClick={() => setCustMode('existing')}>👥 عميل حالي</button>
+      </div>
+      {custMode === 'existing' && (
+        <div className="fld" style={{ marginBottom: 12 }}>
+          <label>اختر العميل — تُملأ بياناته تلقائياً</label>
+          <select value={selectedCustomerId} onChange={e => pickExisting(e.target.value)}>
+            <option value="">— اختر عميلاً —</option>
+            {existingCustomers.map(c => <option key={c.id} value={c.id}>{c.full_name} — {c.id_number} — {c.phone}</option>)}
+          </select>
+        </div>
+      )}
       <div className="grid3">
         <div><label>نوع العميل *</label>
           <select value={f.customer_type} onChange={e => set('customer_type', e.target.value)}>
@@ -757,13 +909,13 @@ function BookingForm({ unit, active, onDone }) {
             <option value="company">شركة / منشأة</option>
           </select></div>
         <div><label>{isCompany ? 'اسم ممثل الشركة *' : 'الاسم الكامل *'}</label>
-          <input value={f.name} onChange={e => set('name', e.target.value)} /></div>
+          <input value={f.name} onChange={e => set('name', e.target.value)} readOnly={custMode === 'existing'} /></div>
         <div><label>نوع الإثبات</label>
           <select value={f.idType} onChange={e => set('idType', e.target.value)}>
             <option value="national_id">هوية وطنية</option><option value="iqama">إقامة</option><option value="passport">جواز سفر</option>
           </select></div>
-        <div><label>رقم الهوية/الإقامة/الجواز *</label><input value={f.idNumber} onChange={e => set('idNumber', e.target.value)} dir="ltr" /></div>
-        <div><label>رقم الجوال *</label><input value={f.phone} onChange={e => set('phone', e.target.value)} placeholder="05XXXXXXXX" dir="ltr" /></div>
+        <div><label>رقم الهوية/الإقامة/الجواز *</label><input value={f.idNumber} onChange={e => set('idNumber', e.target.value)} dir="ltr" readOnly={custMode === 'existing'} /></div>
+        <div><label>رقم الجوال *</label><input value={f.phone} onChange={e => set('phone', e.target.value)} placeholder="05XXXXXXXX" dir="ltr" readOnly={custMode === 'existing'} /></div>
         <div><label>صورة إثبات الشخصية</label><input type="file" accept="image/*,.pdf" onChange={e => setIdFile(e.target.files[0])} /></div>
         {!isCompany && <div><label>المرافقون (اختياري)</label><input value={f.companion} onChange={e => set('companion', e.target.value)} placeholder="الاسم + رقم الهوية" /></div>}
       </div>

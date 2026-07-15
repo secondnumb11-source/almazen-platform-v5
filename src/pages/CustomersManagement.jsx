@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
-import { SAR, num, today } from '../lib/helpers'
+import { SAR, num, today, uploadFile, PAY_METHODS } from '../lib/helpers'
 import RentalContract from '../components/RentalContract'
+import PrintableDoc, { DocGrid } from '../components/PrintableDoc'
 
 const ID_TYPES = { national_id: 'هوية وطنية', iqama: 'إقامة', passport: 'جواز سفر' }
+const PAY_TYPE_LABEL = { rent: 'إيجار', down_payment: 'عربون', insurance: 'تأمين', penalty: 'غرامة', other: 'أخرى' }
 
 /* إدارة العملاء والمستأجرين — CRM موحّد مع نظام الولاء وبيانات بوابة المستأجر */
 export default function CustomersManagement() {
@@ -22,7 +24,7 @@ export default function CustomersManagement() {
         id, total_amount, base_price, discount_percent, discount_amount, contract_number,
         check_in_date, check_out_date, status, rent_period, down_payment, insurance_amount, unit_id,
         units(unit_number, category, description),
-        payments(amount, payment_type, method, payment_date, reference_number),
+        payments(amount, payment_type, method, payment_date, reference_number, document_url),
         profiles!bookings_employee_id_fkey(full_name)
       )`)
       .eq('company_id', profile.company_id).order('full_name')
@@ -73,13 +75,18 @@ export default function CustomersManagement() {
 
 function AddCustomerModal({ onClose, onSaved }) {
   const { profile, toast } = useAuth()
-  const [f, setF] = useState({ full_name: '', id_type: 'national_id', id_number: '', phone: '', email: '', notes: '' })
+  const [f, setF] = useState({ full_name: '', id_type: 'national_id', id_number: '', birth_date: '', phone: '', email: '', notes: '' })
+  const [idFile, setIdFile] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const save = async () => {
     if (!f.full_name || !f.id_number || !f.phone) return toast('أكمل الاسم ورقم الإثبات والجوال', true)
     setSaving(true)
-    const { error } = await supabase.from('customers').insert({ ...f, company_id: profile.company_id, created_by: profile.id })
+    const id_document_url = idFile ? await uploadFile(supabase, 'documents', profile.company_id, idFile) : null
+    const { error } = await supabase.from('customers').insert({
+      ...f, birth_date: f.birth_date || null, id_document_url,
+      company_id: profile.company_id, created_by: profile.id
+    })
     setSaving(false)
     if (error) return toast('خطأ: ' + error.message, true)
     toast('✓ أُضيف العميل بنجاح')
@@ -98,8 +105,10 @@ function AddCustomerModal({ onClose, onSaved }) {
                 {Object.entries(ID_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select></div>
             <div className="fld"><label>رقم الإثبات *</label><input dir="ltr" value={f.id_number} onChange={e => setF({ ...f, id_number: e.target.value })} /></div>
+            <div className="fld"><label>تاريخ الميلاد</label><input type="date" value={f.birth_date} onChange={e => setF({ ...f, birth_date: e.target.value })} /></div>
             <div className="fld"><label>الجوال *</label><input dir="ltr" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></div>
             <div className="fld"><label>البريد الإلكتروني</label><input dir="ltr" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></div>
+            <div className="fld"><label>مستند الهوية/الإقامة</label><input type="file" accept="image/*,.pdf" onChange={e => setIdFile(e.target.files?.[0] || null)} /></div>
             <div className="fld" style={{ gridColumn: '1 / -1' }}><label>ملاحظات</label><input value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></div>
           </div>
           <button className="btn btn-gold" style={{ width: '100%', marginTop: 12 }} disabled={saving} onClick={save}>{saving ? '…جارٍ الحفظ' : 'حفظ العميل'}</button>
@@ -111,7 +120,8 @@ function AddCustomerModal({ onClose, onSaved }) {
 
 function CustomerDetail({ customer, onClose, onChanged }) {
   const { profile, company, toast, isOwner } = useAuth()
-  const canEdit = isOwner || profile.role === 'accountant'
+  const canEdit = isOwner || profile.role === 'accountant'      // تعديل بيانات العميل
+  const canEditPortal = true                                     // كل الأدوار تعدّل بيانات دخول البوابة
   const [loyalty, setLoyalty] = useState([])
   const [templates, setTemplates] = useState([])
   const [portalAccts, setPortalAccts] = useState({})
@@ -120,17 +130,22 @@ function CustomerDetail({ customer, onClose, onChanged }) {
   const [editingInfo, setEditingInfo] = useState(false)
   const [infoForm, setInfoForm] = useState({
     full_name: customer.full_name || '', id_type: customer.id_type || 'national_id',
-    id_number: customer.id_number || '', phone: customer.phone || '', email: customer.email || '', notes: customer.notes || ''
+    id_number: customer.id_number || '', birth_date: customer.birth_date || '',
+    phone: customer.phone || '', email: customer.email || '', notes: customer.notes || ''
   })
+  const [idFile, setIdFile] = useState(null)
   const [savingInfo, setSavingInfo] = useState(false)
   const [redeemPoints, setRedeemPoints] = useState('')
   const [redeeming, setRedeeming] = useState(false)
   const [contractFor, setContractFor] = useState(null)
+  const [showReport, setShowReport] = useState(false)
 
   const saveInfo = async () => {
     if (!infoForm.full_name || !infoForm.id_number || !infoForm.phone) return toast('أكمل الاسم ورقم الإثبات والجوال', true)
     setSavingInfo(true)
-    const { error } = await supabase.from('customers').update(infoForm).eq('id', customer.id)
+    const patch = { ...infoForm, birth_date: infoForm.birth_date || null }
+    if (idFile) patch.id_document_url = await uploadFile(supabase, 'documents', profile.company_id, idFile)
+    const { error } = await supabase.from('customers').update(patch).eq('id', customer.id)
     setSavingInfo(false)
     if (error) return toast('خطأ: ' + error.message, true)
     toast('✓ حُدّثت بيانات العميل')
@@ -157,7 +172,7 @@ function CustomerDetail({ customer, onClose, onChanged }) {
       .then(({ data }) => setTemplates(data || []))
     const bookingIds = (customer.bookings || []).map(b => b.id)
     if (bookingIds.length) {
-      supabase.from('tenant_portal_accounts').select('booking_id, username, access_token').in('booking_id', bookingIds)
+      supabase.from('tenant_portal_accounts').select('booking_id, username, access_token, is_active').in('booking_id', bookingIds)
         .then(({ data }) => {
           const m = {}; (data || []).forEach(a => { m[a.booking_id] = a }); setPortalAccts(m)
         })
@@ -178,6 +193,21 @@ function CustomerDetail({ customer, onClose, onChanged }) {
     toast('✓ تم توليد رمز دخول جديد')
     setPortalAccts(m => ({ ...m, [bookingId]: { ...m[bookingId], access_token: data } }))
   }
+
+  const togglePortal = async (bookingId, active) => {
+    const { error } = await supabase.from('tenant_portal_accounts').update({ is_active: active }).eq('booking_id', bookingId)
+    if (error) return toast('خطأ: ' + error.message, true)
+    toast(active ? '✓ فُعّل حساب البوابة' : '✓ عُطّل حساب البوابة')
+    setPortalAccts(m => ({ ...m, [bookingId]: { ...m[bookingId], is_active: active } }))
+  }
+
+  // إجماليات مالية للعميل عبر كل حجوزاته
+  const allPayments = (customer.bookings || []).flatMap(b => (b.payments || []).map(p => ({ ...p, unit: b.units?.unit_number })))
+  const totalContracted = (customer.bookings || []).reduce((s, b) => s + num(b.total_amount), 0)
+  const totalPaid = allPayments.reduce((s, p) => s + num(p.amount), 0)
+  const totalInsurance = allPayments.filter(p => p.payment_type === 'insurance').reduce((s, p) => s + num(p.amount), 0)
+  const totalDeposit = allPayments.filter(p => p.payment_type === 'down_payment').reduce((s, p) => s + num(p.amount), 0)
+  const lastRedeem = loyalty.find(l => l.points < 0)
 
   const activeBooking = (customer.bookings || []).find(b => b.status === 'checked_in') || customer.bookings?.[0]
 
@@ -205,13 +235,21 @@ function CustomerDetail({ customer, onClose, onChanged }) {
       <div className="modal" style={{ width: 'min(820px,100%)' }}>
         <div className="modal-h"><h3>ملف العميل — {customer.full_name}</h3><button className="x" onClick={onClose}>✕</button></div>
         <div className="modal-b">
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            <button className="btn btn-blue btn-sm" onClick={() => setShowReport(true)}>🖨 طباعة تقرير العميل الشامل</button>
+            {customer.id_document_url && <a className="btn btn-ghost btn-sm" href={customer.id_document_url} target="_blank" rel="noreferrer">🪪 عرض مستند الهوية</a>}
+          </div>
+
           {!editingInfo ? (
             <div className="ts-grid" style={{ marginBottom: 16 }}>
+              <div><b>الاسم الكامل</b><span>{customer.full_name}</span></div>
               <div><b>نوع الإثبات</b><span>{ID_TYPES[customer.id_type]}</span></div>
               <div><b>رقم الإثبات</b><span dir="ltr">{customer.id_number}</span></div>
+              <div><b>تاريخ الميلاد</b><span dir="ltr">{customer.birth_date || '—'}</span></div>
               <div><b>الجوال</b><span dir="ltr">{customer.phone}</span></div>
               <div><b>البريد</b><span>{customer.email || '—'}</span></div>
               <div><b>نقاط الولاء</b><span className="money">{customer.loyalty_points} نقطة</span></div>
+              <div><b>آخر استبدال</b><span>{lastRedeem ? lastRedeem.created_at?.slice(0, 10) : '—'}</span></div>
               <div><b>VIP</b><span>{customer.is_vip ? 'نعم' : 'لا'}</span></div>
               {canEdit && <div style={{ gridColumn: '1 / -1' }}>
                 <button className="btn btn-ghost btn-sm" onClick={() => setEditingInfo(true)}>✎ تعديل بيانات العميل</button>
@@ -225,8 +263,10 @@ function CustomerDetail({ customer, onClose, onChanged }) {
                   {Object.entries(ID_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select></div>
               <div className="fld"><label>رقم الإثبات</label><input dir="ltr" value={infoForm.id_number} onChange={e => setInfoForm({ ...infoForm, id_number: e.target.value })} /></div>
+              <div className="fld"><label>تاريخ الميلاد</label><input type="date" value={infoForm.birth_date} onChange={e => setInfoForm({ ...infoForm, birth_date: e.target.value })} /></div>
               <div className="fld"><label>الجوال</label><input dir="ltr" value={infoForm.phone} onChange={e => setInfoForm({ ...infoForm, phone: e.target.value })} /></div>
               <div className="fld"><label>البريد الإلكتروني</label><input dir="ltr" value={infoForm.email} onChange={e => setInfoForm({ ...infoForm, email: e.target.value })} /></div>
+              <div className="fld"><label>تحديث مستند الهوية/الإقامة</label><input type="file" accept="image/*,.pdf" onChange={e => setIdFile(e.target.files?.[0] || null)} /></div>
               <div className="fld"><label>ملاحظات</label><input value={infoForm.notes} onChange={e => setInfoForm({ ...infoForm, notes: e.target.value })} /></div>
               <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
                 <button className="btn btn-gold btn-sm" disabled={savingInfo} onClick={saveInfo}>{savingInfo ? '…' : 'حفظ'}</button>
@@ -246,38 +286,84 @@ function CustomerDetail({ customer, onClose, onChanged }) {
             </div>
           )}
 
-          <h4 className="ts-h4">سجل الإقامات ({(customer.bookings || []).length})</h4>
-          <table className="tbl" style={{ marginBottom: 16 }}>
-            <thead><tr><th>الوحدة</th><th>من</th><th>إلى</th><th>الإجمالي</th><th>بيانات بوابة المستأجر</th><th></th></tr></thead>
+          <h4 className="ts-h4">الملخص المالي للعميل</h4>
+          <div className="kpis" style={{ marginBottom: 16 }}>
+            <div className="kpi"><div className="v">{SAR(totalContracted)}</div><div className="l">إجمالي التعاقدات</div></div>
+            <div className="kpi"><div className="v">{SAR(totalPaid)}</div><div className="l">إجمالي المدفوع</div></div>
+            <div className="kpi"><div className="v">{SAR(totalDeposit)}</div><div className="l">العربون المدفوع</div></div>
+            <div className="kpi"><div className="v">{SAR(totalInsurance)}</div><div className="l">التأمين المدفوع</div></div>
+          </div>
+
+          <h4 className="ts-h4">سجل الإيجارات الكامل ({(customer.bookings || []).length})</h4>
+          <div style={{ overflowX: 'auto' }}>
+          <table className="tbl" style={{ marginBottom: 16, minWidth: 720 }}>
+            <thead><tr><th>الوحدة</th><th>من</th><th>إلى</th><th>النوع</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>العربون</th><th>التأمين</th><th>العقد</th></tr></thead>
             <tbody>
-              {(customer.bookings || []).length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد حجوزات</td></tr>}
+              {(customer.bookings || []).length === 0 && <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد حجوزات</td></tr>}
               {(customer.bookings || []).map(b => {
-                const acct = portalAccts[b.id]
+                const paid = (b.payments || []).reduce((s, p) => s + num(p.amount), 0)
                 return (
                   <tr key={b.id}>
-                    <td>{b.units?.unit_number}</td><td>{b.check_in_date}</td><td>{b.check_out_date}</td>
+                    <td>{b.units?.unit_number}</td><td dir="ltr">{b.check_in_date}</td><td dir="ltr">{b.check_out_date}</td>
+                    <td>{{ daily: 'يومي', monthly: 'شهري', yearly: 'سنوي' }[b.rent_period] || b.rent_period}</td>
                     <td className="money">{SAR(b.total_amount)}</td>
+                    <td className="money">{SAR(paid)}</td>
+                    <td className={num(b.total_amount) - paid > 0 ? 'neg' : 'money'}>{SAR(num(b.total_amount) - paid)}</td>
+                    <td>{SAR(b.down_payment)}</td><td>{SAR(b.insurance_amount)}</td>
+                    <td><button className="btn btn-ghost btn-sm" onClick={() => setContractFor(b)}>🖨</button></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          </div>
+
+          <h4 className="ts-h4">تفاصيل الدفعات</h4>
+          <table className="tbl" style={{ marginBottom: 16 }}>
+            <thead><tr><th>التاريخ</th><th>الوحدة</th><th>النوع</th><th>المبلغ</th><th>طريقة الدفع</th><th>المستند</th></tr></thead>
+            <tbody>
+              {allPayments.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد دفعات</td></tr>}
+              {allPayments.sort((a, b) => (b.payment_date || '').localeCompare(a.payment_date || '')).map((p, i) => (
+                <tr key={i}>
+                  <td dir="ltr">{p.payment_date}</td><td>{p.unit || '—'}</td>
+                  <td>{PAY_TYPE_LABEL[p.payment_type] || p.payment_type}</td>
+                  <td className="money">{SAR(p.amount)}</td><td>{PAY_METHODS[p.method] || p.method}</td>
+                  <td>{p.document_url ? <a className="btn btn-ghost btn-sm" href={p.document_url} target="_blank" rel="noreferrer">🔍 عرض</a> : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h4 className="ts-h4">بيانات دخول بوابة المستأجر</h4>
+          <table className="tbl" style={{ marginBottom: 16 }}>
+            <thead><tr><th>الوحدة</th><th>اسم المستخدم</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+            <tbody>
+              {(customer.bookings || []).filter(b => portalAccts[b.id]).length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد حسابات بوابة</td></tr>}
+              {(customer.bookings || []).map(b => {
+                const acct = portalAccts[b.id]
+                if (!acct) return null
+                return (
+                  <tr key={b.id}>
+                    <td>{b.units?.unit_number}</td>
                     <td>
-                      {acct ? (
-                        canEdit && editingCreds === b.id ? (
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <input dir="ltr" defaultValue={acct.username} style={{ width: 100 }}
-                              onKeyDown={e => e.key === 'Enter' && saveUsername(b.id, e.target.value)}
-                              id={`u-${b.id}`} />
-                            <button className="btn btn-green btn-sm" onClick={() => saveUsername(b.id, document.getElementById(`u-${b.id}`).value)}>حفظ</button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 12 }}>
-                            <span dir="ltr">{acct.username}</span>
-                            {canEdit && <>
-                              <button className="btn btn-ghost btn-sm" onClick={() => setEditingCreds(b.id)}>✎</button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => regenToken(b.id)}>🔄 رمز جديد</button>
-                            </>}
-                          </div>
-                        )
-                      ) : <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>}
+                      {canEditPortal && editingCreds === b.id ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <input dir="ltr" defaultValue={acct.username} style={{ width: 110 }} id={`u-${b.id}`}
+                            onKeyDown={e => e.key === 'Enter' && saveUsername(b.id, e.target.value)} />
+                          <button className="btn btn-green btn-sm" onClick={() => saveUsername(b.id, document.getElementById(`u-${b.id}`).value)}>حفظ</button>
+                        </div>
+                      ) : <span dir="ltr">{acct.username}</span>}
                     </td>
-                    <td><button className="btn btn-ghost btn-sm" onClick={() => setContractFor(b)}>🖨 العقد</button></td>
+                    <td><span className={'chip ' + (acct.is_active === false ? 'chip-danger' : 'chip-ok')}>{acct.is_active === false ? 'معطّل' : 'نشط'}</span></td>
+                    <td>
+                      {canEditPortal && <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setEditingCreds(b.id)}>✎ اسم المستخدم</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => regenToken(b.id)}>🔄 رابط جديد</button>
+                        {acct.is_active === false
+                          ? <button className="btn btn-ghost btn-sm" onClick={() => togglePortal(b.id, true)}>تفعيل</button>
+                          : <button className="btn btn-ghost btn-sm" onClick={() => togglePortal(b.id, false)}>تعطيل</button>}
+                      </div>}
+                    </td>
                   </tr>
                 )
               })}
@@ -318,6 +404,50 @@ function CustomerDetail({ customer, onClose, onChanged }) {
           unit={contractFor.units}
           booking={contractFor}
         />
+      )}
+      {showReport && (
+        <PrintableDoc
+          company={company} title={`تقرير العميل — ${customer.full_name}`}
+          docNumber={'CUS-' + (customer.id?.slice(0, 8) || '')}
+          qrValue={JSON.stringify({ customer: customer.full_name, id: customer.id_number, phone: customer.phone })}
+          onClose={() => setShowReport(false)}
+        >
+          <h4 className="contract-h4">البيانات الشخصية</h4>
+          <DocGrid items={[
+            ['الاسم الكامل', customer.full_name],
+            ['نوع الإثبات', ID_TYPES[customer.id_type]],
+            ['رقم الإثبات', customer.id_number],
+            ['تاريخ الميلاد', customer.birth_date || '—'],
+            ['الجوال', customer.phone],
+            ['البريد', customer.email || '—'],
+            ['نقاط الولاء', customer.loyalty_points + ' نقطة'],
+            ['آخر استبدال نقاط', lastRedeem ? lastRedeem.created_at?.slice(0, 10) : '—'],
+          ]} />
+          <h4 className="contract-h4">الملخص المالي</h4>
+          <DocGrid items={[
+            ['إجمالي التعاقدات', SAR(totalContracted)],
+            ['إجمالي المدفوع', SAR(totalPaid)],
+            ['المتبقي', SAR(totalContracted - totalPaid)],
+            ['العربون المدفوع', SAR(totalDeposit)],
+            ['التأمين المدفوع', SAR(totalInsurance)],
+            ['عدد الإيجارات', (customer.bookings || []).length],
+          ]} />
+          <h4 className="contract-h4">سجل الإيجارات</h4>
+          <table className="tbl" style={{ marginBottom: 8 }}>
+            <thead><tr><th>الوحدة</th><th>من</th><th>إلى</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead>
+            <tbody>
+              {(customer.bookings || []).length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد</td></tr>}
+              {(customer.bookings || []).map(b => {
+                const paid = (b.payments || []).reduce((s, p) => s + num(p.amount), 0)
+                return <tr key={b.id}>
+                  <td>{b.units?.unit_number}</td><td dir="ltr">{b.check_in_date}</td><td dir="ltr">{b.check_out_date}</td>
+                  <td className="money">{SAR(b.total_amount)}</td><td className="money">{SAR(paid)}</td>
+                  <td>{SAR(num(b.total_amount) - paid)}</td>
+                </tr>
+              })}
+            </tbody>
+          </table>
+        </PrintableDoc>
       )}
     </div>
   )

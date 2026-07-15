@@ -61,7 +61,7 @@ export default function Home({ onNav }) {
         </div>
         <div className="hero-actions">
           <button className="btn btn-gold btn-sm" onClick={() => onNav?.('dash')}>إدارة الوحدات →</button>
-          {profile?.role === 'accountant' && <button className="btn btn-ghost btn-sm" onClick={() => onNav?.('reports')}>قسم الحسابات →</button>}
+          {profile?.role === 'accountant' && <button className="btn btn-ghost btn-sm" onClick={() => onNav?.('reports')}>قسم المحاسبة →</button>}
         </div>
       </div>
 
@@ -103,7 +103,7 @@ export default function Home({ onNav }) {
               <span>حجز، إخلاء، صيانة، تعديل</span>
             </button>
             {profile?.role === 'accountant' && <button className="qa-btn" onClick={() => onNav?.('reports')}>
-              <span className="qa-ico">📊</span><b>قسم الحسابات</b>
+              <span className="qa-ico">📊</span><b>قسم المحاسبة</b>
               <span>Excel + PDF بالفلاتر التي تختارها</span>
             </button>}
             {(isOwner || profile?.role === 'accountant') && <button className="qa-btn" onClick={() => onNav?.('settings')}>

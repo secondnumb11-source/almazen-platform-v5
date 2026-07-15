@@ -138,7 +138,7 @@ function Shell() {
   }
 
   const unread = notifs.filter(n => !n.read_at && n.channel === 'in_app').length + evictionAlerts.length
-  const pageTitles = { home:'الرئيسية', dash:'إدارة الوحدات', customers:'إدارة العملاء والمستأجرين', ops:'العمليات اليومية', staff:'إدارة الموظفين', reports:'قسم الحسابات', center:'مركز التقارير والمراقبة', ejar:'التكامل مع منصة إيجار', settings:'الإعدادات' }
+  const pageTitles = { home:'الرئيسية', dash:'إدارة الوحدات', customers:'إدارة العملاء والمستأجرين', ops:'العمليات اليومية', staff:'إدارة الموظفين', reports:'قسم المحاسبة', center:'مركز التقارير والمراقبة', ejar:'التكامل مع منصة إيجار', settings:'الإعدادات' }
 
   return (
     <div className={'app-shell' + (collapsed ? ' sb-collapsed' : '')}>

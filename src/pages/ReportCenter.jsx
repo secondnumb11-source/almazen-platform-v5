@@ -30,15 +30,12 @@ export default function ReportCenter() {
         <button className={tab === 'maintenance' ? 'on' : ''} onClick={() => setTab('maintenance')}>🛠️ الصيانة والخدمات</button>
         <button className={tab === 'accountant' ? 'on' : ''} onClick={() => setTab('accountant')}>💼 التقرير الشامل للمحاسب</button>
         <button className={tab === 'tenant' ? 'on' : ''} onClick={() => setTab('tenant')}>👤 ملف المستأجر مع الفاتورة</button>
-        {/* المدير فقط: فحص التخزين ومراقبة النشاط */}
-        {isOwnerLike && <button className={tab === 'storage' ? 'on' : ''} onClick={() => setTab('storage')}>🗄️ فحص التخزين</button>}
         {(isOwnerLike || isAccountant) && <button className={tab === 'activity' ? 'on' : ''} onClick={() => setTab('activity')}>👁️ مراقبة نشاط الموظفين</button>}
       </div>
       {tab === 'reports' && <UnifiedReports />}
       {tab === 'maintenance' && <MaintenanceReport />}
       {tab === 'accountant' && <AccountantComprehensive />}
       {tab === 'tenant' && <TenantFileTab />}
-      {tab === 'storage' && isOwnerLike && <StorageCheck />}
       {tab === 'activity' && (isOwnerLike || isAccountant) && <ActivityMonitor />}
     </div>
   )
@@ -224,121 +221,6 @@ function UnifiedReports() {
             </div>
           )}
         </div>
-      )}
-    </div>
-  )
-}
-
-/* =================== فحص التخزين =================== */
-const REQUIRED_BUCKETS = [
-  { id: 'unit-media', public: true, desc: 'صور وفيديو الوحدات + الشعار' },
-  { id: 'handover-signatures', public: false, desc: 'توقيعات وصور نماذج التسليم والاستلام' }
-]
-
-const FIX_SQL = `-- إنشاء المخازن الناقصة والسياسات المطلوبة
-insert into storage.buckets (id, name, public)
-values ('unit-media', 'unit-media', true),
-       ('handover-signatures', 'handover-signatures', false)
-on conflict (id) do nothing;
-
--- رفع الملفات: كل مستخدم داخل مجلد شركته فقط (اسم المجلد = company_id)
-create policy if not exists storage_upload_own_company on storage.objects for insert
-  with check (
-    bucket_id in ('unit-media','handover-signatures')
-    and auth.uid() is not null
-    and (storage.foldername(name))[1] = (select company_id::text from profiles where id = auth.uid())
-  );
-
--- قراءة unit-media للعموم (روابط المشاركة)
-create policy if not exists storage_read_unit_media on storage.objects for select
-  using (bucket_id = 'unit-media');
-
--- قراءة توقيعات التسليم لأعضاء نفس الشركة فقط
-create policy if not exists storage_read_handover_company on storage.objects for select
-  using (
-    bucket_id = 'handover-signatures'
-    and (storage.foldername(name))[1] = (select company_id::text from profiles where id = auth.uid())
-  );
-
--- حذف الملفات: المدير داخل شركته فقط
-create policy if not exists storage_delete_own_company on storage.objects for delete
-  using (
-    bucket_id in ('unit-media','handover-signatures')
-    and (storage.foldername(name))[1] = (select company_id::text from profiles where id = auth.uid())
-    and (select role from profiles where id = auth.uid()) in ('owner','manager')
-  );
-
--- ملاحظة: إن ظهرت هذه المخازن "ناقصة" هنا رغم وجودها فعلياً، فالسبب
--- الأرجح أن storage.buckets نفسها بلا سياسة قراءة (RLS يمنع listBuckets()
--- من إعادة أي نتيجة). نفّذ هذا أيضاً:
-create policy if not exists buckets_list_authenticated on storage.buckets for select
-  to authenticated using (true);`
-
-function StorageCheck() {
-  const { toast } = useAuth()
-  const [state, setState] = useState(null)
-  const [busy, setBusy] = useState(false)
-
-  const run = async () => {
-    setBusy(true)
-    try {
-      const { data, error } = await supabase.storage.listBuckets()
-      if (error) throw error
-      const found = new Set((data || []).map(b => b.id))
-      setState(REQUIRED_BUCKETS.map(b => ({ ...b, exists: found.has(b.id) })))
-    } catch (e) {
-      setState('error:' + e.message)
-      toast('تعذّر فحص التخزين: ' + e.message, true)
-    } finally { setBusy(false) }
-  }
-
-  useEffect(() => { run() }, [])
-
-  const missing = Array.isArray(state) && state.some(b => !b.exists)
-
-  return (
-    <div className="builder">
-      <h3>فحص المخازن والسياسات (Storage Buckets & Policies)</h3>
-      <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 12 }}>
-        يتحقق من وجود مخازن <b>unit-media</b> و<b>handover-signatures</b>. إن كان أيٌّ منها ناقصاً، انسخ الـ SQL بالأسفل ونفّذه في محرر SQL بمشروع قاعدة البيانات.
-      </p>
-      <button className="btn btn-blue btn-sm" disabled={busy} onClick={run}>{busy ? 'جارٍ الفحص…' : '↻ إعادة الفحص'}</button>
-
-      {typeof state === 'string' && (
-        <p style={{ color: 'var(--st-oc)', marginTop: 12 }}>خطأ في الفحص: {state.slice(6)}</p>
-      )}
-
-      {Array.isArray(state) && (
-        <table className="tbl" style={{ marginTop: 14 }}>
-          <thead><tr><th>المخزن</th><th>الوصف</th><th>الخصوصية</th><th>الحالة</th></tr></thead>
-          <tbody>
-            {state.map(b => (
-              <tr key={b.id}>
-                <td><b dir="ltr">{b.id}</b></td>
-                <td>{b.desc}</td>
-                <td>{b.public ? 'عام' : 'خاص'}</td>
-                <td>{b.exists
-                  ? <span className="chip" style={{ background: '#E7F5EC', color: 'var(--green)' }}>موجود ✓</span>
-                  : <span className="chip" style={{ background: '#FDECEC', color: 'var(--st-oc)' }}>ناقص ✕</span>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {missing && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <b style={{ color: 'var(--st-oc)' }}>يوجد نقص — نفّذ هذا الـ SQL لإصلاحه:</b>
-            <button className="btn btn-gold btn-sm" onClick={() => {
-              navigator.clipboard?.writeText(FIX_SQL); toast('✓ نُسخ SQL')
-            }}>نسخ SQL</button>
-          </div>
-          <pre style={{ background: '#0e2340', color: '#e8eef7', padding: 14, borderRadius: 10, overflowX: 'auto', fontSize: 12, direction: 'ltr', textAlign: 'left', marginTop: 8 }}>{FIX_SQL}</pre>
-        </div>
-      )}
-      {Array.isArray(state) && !missing && (
-        <p style={{ color: 'var(--green)', marginTop: 14, fontWeight: 700 }}>🎉 كل المخازن المطلوبة موجودة.</p>
       )}
     </div>
   )

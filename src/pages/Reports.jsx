@@ -70,7 +70,7 @@ export default function Reports() {
 
   return (
     <div>
-      <div className="pg-title"><h2>قسم الحسابات — التقارير والأدوات الذكية</h2>
+      <div className="pg-title"><h2>قسم المحاسبة — التقارير والأدوات الذكية</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-gold btn-sm" onClick={async () => {
             toast('جارٍ تجهيز ملف الحسابات الشامل…')

@@ -8,7 +8,7 @@ const items = [
   { k: 'customers', label: 'إدارة العملاء والمستأجرين', icon: '👥', roles: 'all' },
   { k: 'ops', label: 'العمليات اليومية', icon: '🧰', roles: 'employee' },
   { k: 'staff', label: 'إدارة الموظفين', icon: '🧑‍💼', roles: 'finance' },
-  { k: 'reports', label: 'قسم الحسابات', icon: '📊', roles: 'accountant' },
+  { k: 'reports', label: 'قسم المحاسبة', icon: '📊', roles: 'accountant' },
   { k: 'center', label: 'مركز التقارير والمراقبة', icon: '🛰️', roles: 'finance' },
   { k: 'ejar', label: 'التكامل مع منصة إيجار', icon: '🏛️', roles: 'finance', soon: true },
   { k: 'settings', label: 'الإعدادات', icon: '⚙️', roles: 'owner_or_accountant' }

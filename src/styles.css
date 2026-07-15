@@ -931,6 +931,31 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 /* ===== ميزة إيجار في الصفحة الرئيسية ===== */
 .ld-ejar-badge{position:relative}
 .ld-ejar-badge b{background:linear-gradient(180deg,#7de3b8,#1f9d6a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+
+/* شارة "ربط عالمي" في صف الإحصائيات — تمييز الميزة الجديدة + رابط للقسم الكامل */
+.ld-channel-hero-badge{position:relative;cursor:pointer;border-radius:14px}
+.ld-channel-hero-badge::before{
+  content:"";position:absolute;inset:6px;border-radius:10px;
+  background:radial-gradient(circle,rgba(198,162,75,.16),transparent 70%);
+  animation:ld-channel-badge-pulse 2.6s ease-in-out infinite;pointer-events:none;
+}
+@keyframes ld-channel-badge-pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.ld-channel-hero-badge b{
+  position:relative;background:linear-gradient(180deg,#8fc4ff,#2f6fed);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.ld-channel-hero-badge span{position:relative}
+.ld-mini-logos{position:relative;display:flex;gap:6px;justify-content:center;margin-top:8px}
+.ld-mini-logo{
+  width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;
+  background:radial-gradient(circle at 30% 30%,#fff,var(--c,#2f6fed) 75%);
+  box-shadow:0 3px 8px rgba(0,0,0,.35),inset 0 0 0 1.5px rgba(255,255,255,.5);
+  transition:transform .3s;
+}
+.ld-channel-hero-badge:hover .ld-mini-logo{transform:translateY(-2px)}
+.ld-channel-hero-badge:hover .ld-mini-logo:nth-child(2){transition-delay:.05s}
+.ld-channel-hero-badge:hover .ld-mini-logo:nth-child(3){transition-delay:.1s}
+.ld-channel-hero-badge:hover .ld-mini-logo:nth-child(4){transition-delay:.15s}
 .ld-ejar-sec{background:radial-gradient(ellipse at top,#0f2b21 0%,#0a1a14 55%,#06110c 100%);color:#eafaf1;padding:80px 24px;position:relative;overflow:hidden}
 .ld-ejar-sec::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 30%,rgba(31,157,106,.25),transparent 55%),radial-gradient(circle at 80% 70%,rgba(212,175,55,.14),transparent 60%);pointer-events:none}
 .ld-ejar-wrap{position:relative;max-width:1180px;margin:0 auto;display:grid;grid-template-columns:340px 1fr;gap:44px;align-items:center}

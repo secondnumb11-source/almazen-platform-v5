@@ -15,6 +15,14 @@ const CHANNEL_LOGOS = [
   { name: 'Vrbo',        ic: '🏖️', clr: '#1E3A5F' },
 ]
 
+// أيقونات مصغّرة لأبرز منصات الحجز — تظهر أسفل شارة "ربط عالمي" في صف الإحصائيات
+const MINI_HERO_LOGOS = [
+  { name: 'Booking.com', ic: '🔷', clr: '#003580' },
+  { name: 'Airbnb',      ic: '🏡', clr: '#FF385C' },
+  { name: 'Expedia',     ic: '✈️', clr: '#FFC72C' },
+  { name: 'Tripadvisor', ic: '🦉', clr: '#34E0A1' },
+]
+
 const HERO_IMGS = [
   'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=70',
   'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1920&q=70',
@@ -120,6 +128,14 @@ export default function Landing({ onLogin }) {
             <div><b><span data-count="8500" data-suffix="+">0</span></b><span>وحدة تُدار يومياً</span></div>
             <div><b><span data-count="99.9" data-suffix="%">0</span></b><span>دقة الحسابات</span></div>
             <div><b>ZATCA</b><span>فوترة متوافقة</span></div>
+            <div className="ld-channel-hero-badge" onClick={() => document.getElementById('channels').scrollIntoView({ behavior: 'smooth' })}>
+              <b>🌐 ربط عالمي</b><span>Booking · Airbnb وغيرها</span>
+              <div className="ld-mini-logos">
+                {MINI_HERO_LOGOS.map(m => (
+                  <span key={m.name} className="ld-mini-logo" style={{ '--c': m.clr }} title={m.name}>{m.ic}</span>
+                ))}
+              </div>
+            </div>
             <div className="ld-ejar-badge"><b>🏛️ إيجار</b><span>قريباً</span></div>
           </div>
         </div>

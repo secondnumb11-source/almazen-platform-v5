@@ -1,6 +1,7 @@
 import React from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { SAR, PAY_METHODS } from '../lib/helpers'
+import { printElement } from '../lib/printWindow'
 
 const PERIOD_LABEL = { daily: 'يومي', monthly: 'شهري', yearly: 'سنوي' }
 const PAY_TYPE_LABEL = { rent: 'إيجار', down_payment: 'عربون', insurance: 'تأمين', penalty: 'غرامة', other: 'أخرى' }
@@ -17,11 +18,7 @@ export default function RentalContract({ booking, customer, unit, company, emplo
     from: booking.check_in_date, to: booking.check_out_date, total
   })
 
-  return (
-    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose?.()}>
-      <div className="modal" style={{ width: 'min(900px,100%)' }}>
-        <div className="modal-h no-print"><h3>عقد الإيجار الإلكتروني</h3><button className="x" onClick={onClose}>✕</button></div>
-        <div className="modal-b">
+  const doc = (
           <div className="contract-doc">
             <div className="contract-head">
               {company?.logo_url && <img src={company.logo_url} alt="logo" />}
@@ -106,9 +103,17 @@ export default function RentalContract({ booking, customer, unit, company, emplo
               <div><span>الطرف الثاني (المستأجر)<br/>{customer?.full_name || '—'}</span><i /></div>
             </div>
           </div>
+  )
+
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose?.()}>
+      <div className="modal" style={{ width: 'min(900px,100%)' }}>
+        <div className="modal-h no-print"><h3>عقد الإيجار الإلكتروني</h3><button className="x" onClick={onClose}>✕</button></div>
+        <div className="modal-b">
+          {doc}
         </div>
         <div className="modal-f no-print">
-          <button className="btn btn-gold" onClick={() => window.print()}>🖨 طباعة العقد</button>
+          <button className="btn btn-gold" onClick={() => printElement(doc, { title: 'عقد الإيجار الإلكتروني' })}>🖨 طباعة العقد</button>
         </div>
       </div>
     </div>

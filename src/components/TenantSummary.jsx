@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
 import { SAR, PAY_METHODS } from '../lib/helpers'
+import { printElement } from '../lib/printWindow'
 
 const PORTAL_BASE = 'https://al-mazen-platform.vercel.app'
 
@@ -103,6 +104,87 @@ export default function TenantSummary({ booking, unit, onClose, autoSend }) {
     toast('✓ تم توليد كلمة مرور جديدة للبوابة — أرسلها للمستأجر')
   }
 
+  const printDoc = (
+    <div>
+      <div className="ts-header">
+        {company?.logo_url && <img src={company.logo_url} alt="logo" />}
+        <div>
+          <h2>{company?.name || 'المازن'}</h2>
+          <div className="ts-sub">الرقم الضريبي: {company?.vat_number || '—'} · {company?.address || ''}</div>
+        </div>
+        <div className="ts-badge">ملخص إيجار</div>
+      </div>
+
+      <div className="ts-grid">
+        <div><b>المستأجر</b><span>{booking.customers?.full_name || '—'}</span></div>
+        <div><b>الجوال</b><span dir="ltr">{booking.customers?.phone || '—'}</span></div>
+        <div><b>رقم الهوية</b><span dir="ltr">{booking.customers?.id_number || '—'}</span></div>
+        <div><b>الوحدة</b><span>{unit?.unit_number} — {unit?.category}</span></div>
+        <div><b>تاريخ الدخول</b><span>{booking.check_in_date}</span></div>
+        <div><b>تاريخ الخروج</b><span>{booking.check_out_date}</span></div>
+        <div><b>الإجمالي</b><span className="money">{SAR(booking.total_amount)}</span></div>
+        <div><b>العربون</b><span>{SAR(booking.down_payment)}</span></div>
+        <div><b>التأمين المدفوع</b><span>{SAR(insurance)}</span></div>
+        <div><b>إجمالي المدفوع</b><span className="money">{SAR(paid)}</span></div>
+        <div><b>المتبقي</b><span className={remaining > 0 ? 'neg' : 'money'}>{SAR(remaining)}</span></div>
+        <div><b>الخصم</b><span>{booking.discount_percent || 0}%</span></div>
+      </div>
+
+      <h4 className="ts-h4">سجل الدفعات ({payments.length})</h4>
+      <table className="tbl">
+        <thead><tr><th>#</th><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>طريقة الدفع</th><th>مرجع</th></tr></thead>
+        <tbody>
+          {payments.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد دفعات</td></tr>}
+          {payments.map((p, i) => (
+            <tr key={p.id}>
+              <td>{i + 1}</td>
+              <td>{p.payment_date?.slice(0, 10)}</td>
+              <td>{{ down_payment: 'عربون', insurance: 'تأمين', rent: 'إيجار', refund: 'استرداد' }[p.payment_type] || p.payment_type}</td>
+              <td className="money">{SAR(p.amount)}</td>
+              <td>{PAY_METHODS[p.method] || p.method}</td>
+              <td dir="ltr">{p.reference_number || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {handovers.length > 0 && (
+        <>
+          <h4 className="ts-h4">سجل التسليم والاستلام</h4>
+          <table className="tbl">
+            <thead><tr><th>النوع</th><th>التاريخ</th><th>وُقّع بواسطة</th><th>ملاحظات</th></tr></thead>
+            <tbody>
+              {handovers.map(h => (
+                <tr key={h.id}>
+                  <td>{h.kind === 'check_in' ? '🔑 تسليم' : '📥 استلام'}</td>
+                  <td>{new Date(h.created_at).toLocaleString('ar-SA')}</td>
+                  <td>{h.signed_by}</td>
+                  <td>{h.notes || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {unit?.is_furnished && Array.isArray(unit.furniture_checklist) && unit.furniture_checklist.length > 0 && (
+        <>
+          <h4 className="ts-h4">قائمة الأثاث الموثّقة ({unit.furniture_checklist.length})</h4>
+          <ul className="ts-furn">
+            {unit.furniture_checklist.map((it, i) => (
+              <li key={i}>{it.present ? '✓' : '✕'} {it.name}{it.note ? ` — ${it.note}` : ''}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <div className="ts-sign">
+        <div><b>توقيع المستأجر</b><span>___________________</span></div>
+        <div><b>توقيع المنشأة</b><span>___________________</span></div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ width: 'min(820px,100%)' }}>
@@ -110,16 +192,7 @@ export default function TenantSummary({ booking, unit, onClose, autoSend }) {
           <h3>ملخص الإيجار للمستأجر — الوحدة {unit?.unit_number}</h3>
           <button className="x" onClick={onClose}>✕</button>
         </div>
-        <div className="modal-b" id="tenant-summary-print">
-          <div className="ts-header">
-            {company?.logo_url && <img src={company.logo_url} alt="logo" />}
-            <div>
-              <h2>{company?.name || 'المازن'}</h2>
-              <div className="ts-sub">الرقم الضريبي: {company?.vat_number || '—'} · {company?.address || ''}</div>
-            </div>
-            <div className="ts-badge">ملخص إيجار</div>
-          </div>
-
+        <div className="modal-b">
           {/* كارت رسالة الترحيب الثابتة */}
           <div className="ts-welcome no-print" style={{
             background: 'linear-gradient(135deg, #fff9e8, #fef3d3)',
@@ -166,75 +239,10 @@ export default function TenantSummary({ booking, unit, onClose, autoSend }) {
             }}>{welcomeMessage}</pre>
           </div>
 
-          <div className="ts-grid">
-            <div><b>المستأجر</b><span>{booking.customers?.full_name || '—'}</span></div>
-            <div><b>الجوال</b><span dir="ltr">{booking.customers?.phone || '—'}</span></div>
-            <div><b>رقم الهوية</b><span dir="ltr">{booking.customers?.id_number || '—'}</span></div>
-            <div><b>الوحدة</b><span>{unit?.unit_number} — {unit?.category}</span></div>
-            <div><b>تاريخ الدخول</b><span>{booking.check_in_date}</span></div>
-            <div><b>تاريخ الخروج</b><span>{booking.check_out_date}</span></div>
-            <div><b>الإجمالي</b><span className="money">{SAR(booking.total_amount)}</span></div>
-            <div><b>العربون</b><span>{SAR(booking.down_payment)}</span></div>
-            <div><b>التأمين المدفوع</b><span>{SAR(insurance)}</span></div>
-            <div><b>إجمالي المدفوع</b><span className="money">{SAR(paid)}</span></div>
-            <div><b>المتبقي</b><span className={remaining > 0 ? 'neg' : 'money'}>{SAR(remaining)}</span></div>
-            <div><b>الخصم</b><span>{booking.discount_percent || 0}%</span></div>
-          </div>
+          {printDoc}
 
-          <h4 className="ts-h4">سجل الدفعات ({payments.length})</h4>
-          <table className="tbl">
-            <thead><tr><th>#</th><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>طريقة الدفع</th><th>مرجع</th></tr></thead>
-            <tbody>
-              {payments.length === 0 && <tr><td colSpan={6} style={{ textAlign:'center', color:'var(--muted)' }}>لا توجد دفعات</td></tr>}
-              {payments.map((p, i) => (
-                <tr key={p.id}>
-                  <td>{i+1}</td>
-                  <td>{p.payment_date?.slice(0,10)}</td>
-                  <td>{{ down_payment:'عربون', insurance:'تأمين', rent:'إيجار', refund:'استرداد' }[p.payment_type] || p.payment_type}</td>
-                  <td className="money">{SAR(p.amount)}</td>
-                  <td>{PAY_METHODS[p.method] || p.method}</td>
-                  <td dir="ltr">{p.reference_number || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {handovers.length > 0 && (
-            <>
-              <h4 className="ts-h4">سجل التسليم والاستلام</h4>
-              <table className="tbl">
-                <thead><tr><th>النوع</th><th>التاريخ</th><th>وُقّع بواسطة</th><th>ملاحظات</th></tr></thead>
-                <tbody>
-                  {handovers.map(h => (
-                    <tr key={h.id}>
-                      <td>{h.kind === 'check_in' ? '🔑 تسليم' : '📥 استلام'}</td>
-                      <td>{new Date(h.created_at).toLocaleString('ar-SA')}</td>
-                      <td>{h.signed_by}</td>
-                      <td>{h.notes || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          )}
-
-          {unit?.is_furnished && Array.isArray(unit.furniture_checklist) && unit.furniture_checklist.length > 0 && (
-            <>
-              <h4 className="ts-h4">قائمة الأثاث الموثّقة ({unit.furniture_checklist.length})</h4>
-              <ul className="ts-furn">
-                {unit.furniture_checklist.map((it, i) => (
-                  <li key={i}>{it.present ? '✓' : '✕'} {it.name}{it.note ? ` — ${it.note}` : ''}</li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          <div className="ts-sign">
-            <div><b>توقيع المستأجر</b><span>___________________</span></div>
-            <div><b>توقيع المنشأة</b><span>___________________</span></div>
-          </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 18 }} className="no-print">
-            <button className="btn btn-gold" onClick={() => window.print()}>🖨 طباعة / PDF</button>
+            <button className="btn btn-gold" onClick={() => printElement(printDoc, { title: 'ملخص إيجار — وحدة ' + (unit?.unit_number || '') })}>🖨 طباعة / PDF</button>
             <button className="btn btn-ghost" onClick={onClose}>إغلاق</button>
           </div>
         </div>

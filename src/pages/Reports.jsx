@@ -78,7 +78,6 @@ export default function Reports() {
             const r = await exportFullAccounts(supabase, profile.company_id)
             toast(`✓ صدر ملف إكسيل بـ 5 أوراق ومعادلات جاهزة — إيرادات ${SAR(r.rev)} ومصروفات ${SAR(r.exp)}`)
           }}>📗 ملف الحسابات الشامل (Excel)</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>📄 طباعة / PDF</button>
         </div>
       </div>
 

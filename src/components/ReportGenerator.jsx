@@ -1,8 +1,57 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { SAR, num, today } from '../lib/helpers'
+import { downloadPDF } from '../lib/pdf'
+import { useAuth } from '../AuthContext'
+
+const REPORT_TITLE = {
+  customer_movement: 'تقرير حركة العملاء',
+  services: 'تقرير الخدمات',
+  maintenance: 'تقرير الصيانة والمدفوعات',
+  occupancy: 'تقرير الإشغال والتوفر',
+  available_units: 'الوحدات المتاحة',
+  occupied_units: 'الوحدات المسكونة',
+  revenue_summary: 'ملخص الإيرادات والمصروفات',
+}
+
+// يحوّل بيانات التقرير الحالية إلى صفوف جاهزة لمولّد الـ PDF المشترك
+function reportToSheets(data) {
+  if (!data) return []
+  if (data.type === 'customer_movement') return [{
+    name: REPORT_TITLE[data.type], numeric: ['عدد الحجوزات'],
+    rows: data.rows.map(c => ({ 'العميل': c.full_name, 'تاريخ الإضافة': c.created_at?.slice(0, 10), 'عدد الحجوزات': (c.bookings || []).length })),
+  }]
+  if (data.type === 'services') return [{
+    name: REPORT_TITLE[data.type], numeric: ['المبلغ'],
+    rows: data.rows.map(s => ({ 'العميل': s.customers?.full_name, 'الوحدة': s.units?.unit_number, 'المبلغ': num(s.base_price), 'تاريخ الدخول': s.check_in_date })),
+  }]
+  if (data.type === 'maintenance') return [{
+    name: REPORT_TITLE[data.type], numeric: ['المبلغ'],
+    rows: [
+      ...data.expenses.map(e => ({ 'الوصف': e.description, 'المورد': e.vendor_name, 'المبلغ': num(e.amount), 'التاريخ': e.expense_date })),
+      ...data.payments.map(p => ({ 'الوصف': 'دفع صيانة', 'المورد': '—', 'المبلغ': num(p.amount), 'التاريخ': p.payment_date })),
+    ],
+  }]
+  if (data.type === 'available_units') return [{
+    name: REPORT_TITLE[data.type],
+    rows: data.rows.map(u => ({ 'الوحدة': u.units?.unit_number, 'تاريخ التوفر': u.check_out_date })),
+  }]
+  if (data.type === 'occupied_units') return [{
+    name: REPORT_TITLE[data.type],
+    rows: data.rows.map(u => ({ 'الوحدة': u.units?.unit_number, 'المستأجر': u.customers?.full_name, 'من': u.check_in_date, 'إلى': u.check_out_date })),
+  }]
+  if (data.type === 'revenue_summary') return [{
+    name: REPORT_TITLE[data.type], numeric: ['المبلغ'],
+    rows: [
+      ...data.payments.map(p => ({ 'النوع': 'إيراد - ' + p.payment_type, 'المبلغ': num(p.amount), 'التاريخ': p.payment_date })),
+      ...data.expenses.map(e => ({ 'النوع': 'مصروف - ' + e.category, 'المبلغ': num(e.amount), 'التاريخ': e.expense_date })),
+    ],
+  }]
+  return []
+}
 
 export function ReportGenerator({ companyId }) {
+  const { company } = useAuth()
   const [reportType, setReportType] = useState('customer_movement')
   const [dateFrom, setDateFrom] = useState(today().slice(0, 8) + '01')
   const [dateTo, setDateTo] = useState(today())
@@ -99,6 +148,12 @@ export function ReportGenerator({ companyId }) {
         <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
         <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
         <button className="btn btn-blue btn-sm" disabled={loading} onClick={generateReport}>{loading ? '...' : 'إنشاء التقرير'}</button>
+        <button className="btn btn-gold btn-sm" disabled={!data} onClick={() => downloadPDF({
+          title: REPORT_TITLE[reportType],
+          company,
+          filters: { 'من': dateFrom, 'إلى': dateTo },
+          sheets: reportToSheets(data),
+        })}>🖨 طباعة / PDF</button>
       </div>
 
       {data && (

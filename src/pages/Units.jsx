@@ -8,6 +8,8 @@ import TenantSummary from '../components/TenantSummary'
 import RentalContract from '../components/RentalContract'
 import PrintableDoc, { DocGrid } from '../components/PrintableDoc'
 import { triggerChannexSync } from '../lib/channexSync'
+import { downloadPDF } from '../lib/pdf'
+import { printElement } from '../lib/printWindow'
 
 /* ============ الشاشة الرئيسية للوحدات ============ */
 export default function Units() {
@@ -625,7 +627,24 @@ function UnitModal({ unit, onClose }) {
                   })}
                 </tbody>
               </table>
-              <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => window.print()}>🖨 طباعة التاريخ الكامل</button>
+              <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => downloadPDF({
+                title: `تاريخ تأجير الوحدة ${unit.unit_number}`,
+                subtitle: CATS[unit.category],
+                company,
+                filters: { 'مستأجر': hFilter.cust || undefined, 'من': hFilter.from || undefined, 'إلى': hFilter.to || undefined },
+                sheets: [{
+                  name: 'سجل الإيجارات',
+                  rows: hist.map(b => ({
+                    'المستأجر': b.customers?.full_name || '—',
+                    'من': b.check_in_date, 'إلى': b.check_out_date,
+                    'الإجمالي': Number(b.total_amount || 0),
+                    'المدفوع': (b.payments || []).reduce((s, p) => s + Number(p.amount), 0),
+                    'العربون': Number(b.down_payment || 0), 'التأمين': Number(b.insurance_amount || 0),
+                    'الحالة': { pending: 'معلق', confirmed: 'محجوز', checked_in: 'ساكن', checked_out: 'منتهي', cancelled: 'ملغي', pending_approval: 'بانتظار موافقة الخصم' }[b.status] || b.status,
+                  })),
+                  numeric: ['الإجمالي', 'المدفوع', 'العربون', 'التأمين'],
+                }],
+              })}>🖨 طباعة التاريخ الكامل</button>
             </div>
           )}
 
@@ -1074,12 +1093,8 @@ function InvoiceView({ inv, company, customer, onClose }) {
   const displayCustomer = isCompany ? (inv.company_name || customer) : (customer || 'مستأجر نقدي')
   const titleAr = isStandard ? 'فاتورة ضريبية معتمدة' : 'فاتورة ضريبية مبسطة'
   const titleEn = isStandard ? 'TAX INVOICE' : 'SIMPLIFIED TAX INVOICE'
-  return (
-    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ width: 'min(760px,100%)' }}>
-        <div className="modal-h"><h3>{titleAr}</h3><button className="x" onClick={onClose}>✕</button></div>
-        <div className="modal-b">
-          <div className="lux-inv" id="invoice-print">
+  const doc = (
+          <div className="lux-inv">
             <div className="lux-inv-head">
               <div className="lux-inv-brand">
                 {company?.logo_url
@@ -1147,9 +1162,17 @@ function InvoiceView({ inv, company, customer, onClose }) {
               {isStandard && ' — فاتورة ضريبية معتمدة (Standard Tax Invoice) صادرة لشركة/منشأة مسجّلة في ضريبة القيمة المضافة.'}
             </div>
           </div>
+  )
+
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ width: 'min(760px,100%)' }}>
+        <div className="modal-h"><h3>{titleAr}</h3><button className="x" onClick={onClose}>✕</button></div>
+        <div className="modal-b">
+          {doc}
 
           <div style={{ display: 'flex', gap: 10, marginTop: 14 }} className="no-print">
-            <button className="btn btn-gold" onClick={() => window.print()}>🖨 طباعة / PDF</button>
+            <button className="btn btn-gold" onClick={() => printElement(doc, { title: titleAr })}>🖨 طباعة / PDF</button>
             <button className="btn btn-ghost" onClick={onClose}>إغلاق</button>
           </div>
         </div>

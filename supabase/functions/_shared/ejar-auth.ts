@@ -44,6 +44,14 @@ export async function requireFinanceRole(req: Request, companyId: string) {
 export function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      // بدون هذين الرأسين يرفض المتصفح طلب الـ preflight (OPTIONS) لأن
+      // supabase-js يرسل تلقائياً رؤوس Authorization/apikey/Content-Type —
+      // وهذا كان السبب الحقيقي لفشل "اختبار الاتصال" في المتصفح الفعلي.
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    }
   })
 }

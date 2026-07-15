@@ -3,6 +3,18 @@ import almazenLogo from '../assets/almazen-logo.png'
 
 /* صور فندقية مجانية الاستخدام من Unsplash — تتحرك بتأثير Ken Burns
    وعند عدم توفر الإنترنت تظهر خلفية زرقاء فاخرة بديلة */
+// شركاء مزامنة الحجز العالميين — تُمثَّل بأيقونة واسم موحّد الطراز بدل شعاراتهم
+// الرسمية المسجَّلة (حفاظاً على حقوق الملكية)، بألوان تقريبية لهوية كل منصة
+const CHANNEL_LOGOS = [
+  { name: 'Booking.com', ic: '🔷', clr: '#003580' },
+  { name: 'Airbnb',      ic: '🏡', clr: '#FF385C' },
+  { name: 'Expedia',     ic: '✈️', clr: '#FFC72C' },
+  { name: 'Agoda',       ic: '🌏', clr: '#5D2E8C' },
+  { name: 'Hotels.com',  ic: '🏨', clr: '#D32F2F' },
+  { name: 'Trip.com',    ic: '🧳', clr: '#2F6FED' },
+  { name: 'Vrbo',        ic: '🏖️', clr: '#1E3A5F' },
+]
+
 const HERO_IMGS = [
   'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=70',
   'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1920&q=70',
@@ -166,6 +178,48 @@ export default function Landing({ onLogin }) {
         </div>
       </section>
 
+
+      {/* ===== ميزة الربط مع منصات الحجز العالمية (Channel Manager) ===== */}
+      <section className="ld-sec ld-channel-sec" id="channels">
+        <div className="ld-channel-wrap">
+          <div className="ld-sec-head">
+            <span className="ld-badge-inline">✦ ميزة عالمية حصرية</span>
+            <h2>وحداتك على Booking.com وAirbnb في آنٍ واحد — بلا لمسة يدوية</h2>
+            <div className="ld-rule" />
+            <p>
+              تُمكِّنك المازن من ربط كل وحداتك بمنصات الحجز العالمية عبر مزامنة لحظية ثنائية الاتجاه:
+              فور تأجير وحدة من موظفك تُغلق تلقائياً على كل المنصات، وفور وصول حجز من أي منصة يُسجَّل
+              في نظامك فوراً وتتحوّل الوحدة برتقالية مع شارة «أونلاين» مميّزة — منظومة واحدة، تحكّم كامل،
+              بلا ازدواج حجز وبلا تدخل يدوي.
+            </p>
+          </div>
+
+          <div className="ld-channel-benefits">
+            <div className="reveal d1"><b>⚡ مزامنة لحظية</b><span>أي تغيير في السعر أو الإتاحة أو حالة الحجز ينعكس فوراً على كل المنصات المرتبطة.</span></div>
+            <div className="reveal d2"><b>🛡️ صفر ازدواج حجز</b><span>حماية على مستوى قاعدة البيانات تمنع تعارض التواريخ بين حجوزاتك المباشرة وحجوزات المنصات.</span></div>
+            <div className="reveal d3"><b>🌍 وصول أوسع للنزلاء</b><span>وحداتك مرئية لملايين المسافرين حول العالم دون أي جهد تسويقي إضافي منك.</span></div>
+            <div className="reveal d1"><b>🎛️ لوحة تحكم واحدة</b><span>كل الحجوزات — مهما كان مصدرها — تُدار وتُحاسَب وتُوثَّق من نفس شاشة المازن.</span></div>
+          </div>
+
+          <div className="ld-channel-logowall">
+            <div className="ld-channel-track">
+              {[...CHANNEL_LOGOS, ...CHANNEL_LOGOS].map((c, i) => (
+                <div className="ld-channel-chip" key={c.name + i} style={{ '--chip-clr': c.clr }}>
+                  <span className="ld-channel-ic">{c.ic}</span>
+                  <span className="ld-channel-name">{c.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="ld-ejar-pills" style={{ justifyContent: 'center' }}>
+            <span className="chip">✓ ربط بضغطة واحدة عبر Channex</span>
+            <span className="chip">✓ منع الحجوزات المزدوجة تلقائياً</span>
+            <span className="chip">✓ تحديث الأسعار والإتاحة فوراً</span>
+            <span className="chip">✓ شارة «أونلاين» على كل حجز خارجي</span>
+          </div>
+        </div>
+      </section>
 
       {/* ===== بوابة الموظف ===== */}
       <section className="ld-sec" style={{ background: 'var(--soft)', maxWidth: 'none' }}>

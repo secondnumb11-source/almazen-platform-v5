@@ -32,7 +32,7 @@ export default function Units() {
       ;(md || []).forEach(m => { if (!t[m.unit_id] && m.media_type === 'image') t[m.unit_id] = m.url })
       setThumbs(t)
       const { data: bk } = await supabase.from('bookings')
-        .select('unit_id,check_in_date,check_out_date,status,ejar_status,ejar_contract_number')
+        .select('unit_id,check_in_date,check_out_date,status,ejar_status,ejar_contract_number,booking_source')
         .in('unit_id', ids).in('status', ['confirmed','checked_in'])
       const a = {}
       ;(bk || []).forEach(b => { a[b.unit_id] = b })
@@ -146,6 +146,9 @@ export default function Units() {
               )}
               {bk?.ejar_status === 'registered' && (
                 <div className="tile-ejar" title={'رقم عقد إيجار: ' + bk.ejar_contract_number}>🏛️ موثّق إيجار</div>
+              )}
+              {bk?.booking_source && bk.booking_source !== 'direct' && (
+                <span className="online-badge" title="حجز وارد من منصة حجز خارجية">🌐 أونلاين</span>
               )}
             </div>
           )

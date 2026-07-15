@@ -143,6 +143,8 @@ function CustomerDetail({ customer, onClose, onChanged }) {
   const [templates, setTemplates] = useState([])
   const [portalAccts, setPortalAccts] = useState({})
   const [editingCreds, setEditingCreds] = useState(null)
+  const [credsForm, setCredsForm] = useState({ username: '', password: '' })
+  const [savingCreds, setSavingCreds] = useState(false)
   const [msgPreview, setMsgPreview] = useState('')
   const [editingInfo, setEditingInfo] = useState(false)
   const [infoForm, setInfoForm] = useState({
@@ -196,12 +198,22 @@ function CustomerDetail({ customer, onClose, onChanged }) {
     }
   }, [customer, profile])
 
-  const saveUsername = async (bookingId, username) => {
-    const { error } = await supabase.from('tenant_portal_accounts').update({ username }).eq('booking_id', bookingId)
-    if (error) return toast('خطأ: ' + error.message, true)
-    toast('✓ حُدّث اسم المستخدم')
+  const saveCreds = async (bookingId) => {
+    setSavingCreds(true)
+    if (credsForm.username) {
+      const { error } = await supabase.from('tenant_portal_accounts').update({ username: credsForm.username }).eq('booking_id', bookingId)
+      if (error) { setSavingCreds(false); return toast('خطأ: ' + error.message, true) }
+      setPortalAccts(m => ({ ...m, [bookingId]: { ...m[bookingId], username: credsForm.username } }))
+    }
+    if (credsForm.password) {
+      const { error } = await supabase.rpc('set_portal_password', { p_booking_id: bookingId, p_password: credsForm.password })
+      if (error) { setSavingCreds(false); return toast('خطأ: ' + error.message, true) }
+      setPortalAccts(m => ({ ...m, [bookingId]: { ...m[bookingId], access_token: credsForm.password } }))
+    }
+    setSavingCreds(false)
     setEditingCreds(null)
-    setPortalAccts(m => ({ ...m, [bookingId]: { ...m[bookingId], username } }))
+    setCredsForm({ username: '', password: '' })
+    toast('✓ حُدّثت بيانات دخول البوابة')
   }
 
   const regenToken = async (bookingId) => {
@@ -281,7 +293,7 @@ function CustomerDetail({ customer, onClose, onChanged }) {
 
 🔐 بيانات الدخول:
 اسم المستخدم: ${acct.username}
-كلمة المرور: [متوفرة في البوابة]
+كلمة المرور: ${acct.access_token}
 
 🔗 رابط البوابة:
 ${portalUrl}
@@ -458,6 +470,22 @@ ${portalUrl}
                       </button>
                     </div>
 
+                    <div style={{ borderTop: '1px solid var(--line)', paddingTop: 10, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ color: 'var(--muted)', fontSize: 11 }}>كلمة المرور</div>
+                        <div style={{ fontWeight: 'bold', marginTop: 2 }} dir="ltr">{acct.access_token}</div>
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(acct.access_token)
+                          toast('✓ تم نسخ كلمة المرور')
+                        }}
+                      >
+                        📋 نسخ
+                      </button>
+                    </div>
+
                     <div style={{ borderTop: '1px solid var(--line)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ color: 'var(--muted)', fontSize: 11 }}>رابط الدخول</div>
@@ -475,10 +503,28 @@ ${portalUrl}
                     </div>
                   </div>
 
+                  {editingCreds === b.id && (
+                    <div className="grid2" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 6, padding: 12, marginBottom: 12 }}>
+                      <div className="fld"><label>اسم مستخدم جديد (اختياري)</label>
+                        <input dir="ltr" value={credsForm.username} placeholder={acct.username}
+                          onChange={e => setCredsForm({ ...credsForm, username: e.target.value })} /></div>
+                      <div className="fld"><label>كلمة مرور جديدة (6 خانات على الأقل، اختياري)</label>
+                        <input dir="ltr" value={credsForm.password}
+                          onChange={e => setCredsForm({ ...credsForm, password: e.target.value })} /></div>
+                      <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
+                        <button className="btn btn-gold btn-sm" disabled={savingCreds} onClick={() => saveCreds(b.id)}>{savingCreds ? '…' : 'حفظ'}</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditingCreds(null); setCredsForm({ username: '', password: '' }) }}>إلغاء</button>
+                      </div>
+                      <div style={{ gridColumn: '1 / -1', fontSize: 11, color: 'var(--muted)' }}>
+                        ⚠️ كلمة مرور قصيرة سهلة التذكّر أقل أماناً من الرمز العشوائي المولَّد تلقائياً — تُستخدم أيضاً كجزء من رابط الدخول المباشر.
+                      </div>
+                    </div>
+                  )}
+
                   {canEditPortal && (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setEditingCreds(b.id)}>✎ تعديل اسم المستخدم</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => regenToken(b.id)}>🔄 توليد رابط جديد</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditingCreds(editingCreds === b.id ? null : b.id)}>✎ تعديل اسم المستخدم/كلمة المرور</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => regenToken(b.id)}>🔄 توليد كلمة مرور عشوائية جديدة</button>
                       {acct.is_active === false
                         ? <button className="btn btn-ghost btn-sm" onClick={() => togglePortal(b.id, true)}>✅ تفعيل</button>
                         : <button className="btn btn-ghost btn-sm" onClick={() => togglePortal(b.id, false)}>⛔ تعطيل</button>}

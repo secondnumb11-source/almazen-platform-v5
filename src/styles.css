@@ -949,6 +949,61 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 .ld-ejar-pills .chip{background:rgba(125,227,184,.10);border:1px solid rgba(125,227,184,.35);color:#c9f0dc;padding:6px 12px;border-radius:999px;font-size:12.5px}
 @media(max-width:820px){.ld-ejar-wrap{grid-template-columns:1fr}.ld-ejar-benefits{grid-template-columns:1fr}}
 
+/* ===== ميزة الربط مع منصات الحجز العالمية (Channel Manager) ===== */
+.ld-channel-sec{
+  background:radial-gradient(ellipse at top,#132c4d 0%,#0c1e36 55%,#070f1e 100%);
+  color:#eaf1fb;padding:80px 24px;position:relative;overflow:hidden;
+}
+.ld-channel-sec::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 15% 25%,rgba(198,162,75,.16),transparent 55%),
+             radial-gradient(circle at 85% 75%,rgba(30,90,180,.28),transparent 60%);
+}
+.ld-channel-wrap{position:relative;max-width:1180px;margin:0 auto}
+.ld-channel-sec .ld-sec-head h2{color:#eaf1fb;font-size:32px}
+.ld-channel-sec .ld-sec-head p{color:#c3d3ea;max-width:760px;margin:16px auto 0}
+
+.ld-channel-benefits{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:36px}
+.ld-channel-benefits div{
+  background:rgba(255,255,255,.045);border:1px solid rgba(198,162,75,.22);border-radius:16px;
+  padding:18px 16px;transition:transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s, box-shadow .35s;
+}
+.ld-channel-benefits div:hover{transform:translateY(-5px);border-color:var(--gold-l);box-shadow:0 18px 34px -18px rgba(198,162,75,.5)}
+.ld-channel-benefits b{display:block;color:var(--gold-l);margin-bottom:6px;font-size:14.5px}
+.ld-channel-benefits span{color:#b9c9df;font-size:12.5px;line-height:1.75}
+@media(max-width:900px){.ld-channel-benefits{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.ld-channel-benefits{grid-template-columns:1fr}}
+
+/* حائط شعارات المنصات — شريط متحرك لا نهائي، يتوقف عند المرور بالماوس */
+.ld-channel-logowall{
+  margin-top:44px;overflow:hidden;position:relative;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+}
+.ld-channel-track{
+  display:flex;gap:16px;width:max-content;
+  animation:ld-channel-scroll 28s linear infinite;
+}
+.ld-channel-logowall:hover .ld-channel-track{animation-play-state:paused}
+@keyframes ld-channel-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+.ld-channel-chip{
+  --chip-clr:#C6A24B;
+  display:flex;align-items:center;gap:10px;flex:0 0 auto;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);
+  border-radius:99px;padding:12px 22px;
+  transition:transform .3s, border-color .3s, box-shadow .3s, background .3s;
+}
+.ld-channel-chip:hover{
+  transform:translateY(-4px) scale(1.04);
+  border-color:var(--chip-clr);
+  background:rgba(255,255,255,.09);
+  box-shadow:0 14px 28px -14px var(--chip-clr);
+}
+.ld-channel-ic{font-size:20px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+.ld-channel-name{font-weight:800;font-size:14.5px;color:#eaf1fb;font-family:'Cairo';letter-spacing:.2px;white-space:nowrap}
+@media(max-width:560px){.ld-channel-chip{padding:9px 16px}.ld-channel-name{font-size:13px}}
+
 /* ===== مربع "قريباً" فاخر — قسم إيجار ===== */
 .ld-soon-box{
   position:relative; overflow:hidden; display:inline-flex; align-items:center; gap:12px;
@@ -1445,6 +1500,16 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
   animation:evictBadgePulse 1.4s ease-in-out infinite;
 }
 @keyframes evictBadgePulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* شارة "أونلاين" — حجز وارد من منصة حجز خارجية (Booking.com/Airbnb...) عبر Channex */
+.online-badge{
+  position:absolute;bottom:10px;inset-inline-end:10px;z-index:4;
+  display:flex;align-items:center;gap:3px;
+  background:rgba(20,30,60,.78);backdrop-filter:blur(6px);
+  border:1px solid rgba(120,170,255,.5);border-radius:99px;
+  padding:3px 9px;font-size:10px;font-weight:800;color:#fff;
+}
+.unit-tile-sm .online-badge{font-size:9px;padding:2px 7px;bottom:8px;inset-inline-end:8px}
 
 /* أزرار حذف الصور في نافذة الوحدة */
 .media-del-btn{

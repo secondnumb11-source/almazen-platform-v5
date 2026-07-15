@@ -7,6 +7,7 @@ import HandoverModal from '../components/HandoverModal'
 import TenantSummary from '../components/TenantSummary'
 import RentalContract from '../components/RentalContract'
 import PrintableDoc, { DocGrid } from '../components/PrintableDoc'
+import { triggerChannexSync } from '../lib/channexSync'
 
 /* ============ الشاشة الرئيسية للوحدات ============ */
 export default function Units() {
@@ -473,6 +474,7 @@ function UnitModal({ unit, onClose }) {
       summary: `إلغاء حجز الوحدة ${unit.unit_number} — المستأجر: ${active.customers?.full_name || '—'}`,
       sensitive: true
     })
+    triggerChannexSync(profile.company_id)
     toast('تم إلغاء الحجز وعادت الوحدة متاحة ✓'); onClose()
   }
 
@@ -805,6 +807,7 @@ function BookingForm({ unit, active, onDone }) {
         : targetStatus === 'checked_in'
           ? '✓ تم التسليم وبدء المدة — الوحدة حمراء الآن، وأُنشئت بوابة المستأجر وأُشعر المحاسب والمدير تلقائياً (تحقق من 🔔)'
           : '✓ تم تأكيد الحجز — الوحدة برتقالية الآن ومُنع الحجز المزدوج على هذه التواريخ')
+      if (!needsApproval) triggerChannexSync(cid)
       if (!needsApproval && targetStatus === 'checked_in') {
         const { data: fullBk } = await supabase.from('bookings')
           .select('*, customers(full_name, phone, id_number)').eq('id', bk.id).single()
@@ -828,6 +831,7 @@ function BookingForm({ unit, active, onDone }) {
       action: 'handover', entity: 'bookings', entity_id: active.id,
       summary: `إخلاء وتسليم الوحدة ${unit.unit_number} — ${active.customers?.full_name || ''}`
     })
+    triggerChannexSync(profile.company_id)
     toast('✓ تم الإخلاء — الوحدة قيد التنظيف (أصفر) وبدأت دورة إرجاع التأمين')
     onDone()
   }
@@ -987,6 +991,7 @@ function BookingForm({ unit, active, onDone }) {
               action: 'handover', entity: 'bookings', entity_id: active.id,
               summary: `تسليم الوحدة ${unit.unit_number} وبدء مدة الإيجار`
             })
+            triggerChannexSync(profile.company_id)
             toast('✓ تم تسليم الوحدة للمستأجر وبدء المدة — أُشعر المحاسب تلقائياً'); onDone()
           }}>تسليم الحجز الحالي وبدء المدة (← أحمر)</button>
         )}

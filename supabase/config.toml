@@ -5,3 +5,8 @@ verify_jwt = true
 
 [functions.auth-email]
 verify_jwt = false
+
+# channex-webhook يُستدعى مباشرة من خوادم Channex نفسها (لا يحمل توكن
+# مستخدم Supabase) — التحقق من الهوية يتم داخلياً بمقارنة السر في الرابط
+[functions.channex-webhook]
+verify_jwt = false

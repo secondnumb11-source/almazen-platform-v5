@@ -8,6 +8,7 @@ import ReceiptOCR from './ReceiptOCR'
 import AccountantTools from './AccountantTools'
 import AccountingCore from './AccountingCore'
 import DiscountApprovals from '../components/DiscountApprovals'
+import { ReportGenerator } from '../components/ReportGenerator'
 
 export default function Reports() {
   const { profile, isOwner, toast } = useAuth()
@@ -81,6 +82,7 @@ export default function Reports() {
         </div>
       </div>
 
+      <ReportGenerator companyId={profile.company_id} />
       <AccountantTools />
       <AccountingCore />
       <DiscountApprovals />

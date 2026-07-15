@@ -4,13 +4,14 @@ import { ROLES } from '../lib/helpers'
 
 const items = [
   { k: 'home', label: 'الرئيسية', icon: '🏠', roles: 'all' },
-  { k: 'dash', label: 'إدارة الوحدات', icon: '🏢', roles: 'all' },
+  { k: 'dash', label: 'إدارة الوحدات والحجوزات', icon: '🏢', roles: 'all' },
   { k: 'customers', label: 'إدارة العملاء والمستأجرين', icon: '👥', roles: 'all' },
   { k: 'ops', label: 'العمليات اليومية', icon: '🧰', roles: 'employee' },
   { k: 'staff', label: 'إدارة الموظفين', icon: '🧑‍💼', roles: 'finance' },
   { k: 'reports', label: 'قسم المحاسبة', icon: '📊', roles: 'accountant' },
   { k: 'center', label: 'مركز التقارير والمراقبة', icon: '🛰️', roles: 'finance' },
   { k: 'ejar', label: 'التكامل مع منصة إيجار', icon: '🏛️', roles: 'finance', soon: true },
+  { k: 'channels', label: 'ربط منصات الحجز (Booking/Airbnb)', icon: '🌐', roles: 'finance' },
   { k: 'settings', label: 'الإعدادات', icon: '⚙️', roles: 'owner_or_accountant' }
 ]
 

@@ -76,6 +76,9 @@ if (!hasSupabaseConfig) {
 
 export const supabase = hasSupabaseConfig ? createClient(url, key) : offlineClient
 
+// عنوان مشروع Supabase — يُستخدم لبناء رابط الـ Edge Functions (مثل webhook مدير القنوات)
+export const SUPABASE_URL = url || FALLBACK_SUPABASE_URL
+
 // مستأجر ثانوي لإنشاء حسابات الموظفين دون فقدان جلسة المدير
 export const adminSignupClient = hasSupabaseConfig ? createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false }

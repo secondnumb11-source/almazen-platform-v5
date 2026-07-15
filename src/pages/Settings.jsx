@@ -25,8 +25,11 @@ const DEFAULT_EMAIL = {
 }
 const DEFAULT_INTEG = {
   whatsappNumber: '',
+  whatsappPhoneNumberId: '',
+  whatsappBusinessAccountId: '',
+  whatsappAccessToken: '',
+  whatsappWebhookToken: '',
   ejarBaseUrl: '',
-  publicBaseUrl: '',
   webhookUrl: '',
 }
 
@@ -192,15 +195,28 @@ export default function Settings() {
         <div className="panel">
           <h3>تهيئة التكامل والقنوات</h3>
           <div className="settings-hint">
-            القيم أدناه عامة (غير سرّية) وتُحفظ محلياً في هذا المتصفح لكل منشأة. المفاتيح والأسرار الحقيقية تبقى في متغيرات البيئة على الخادم.
+            <b>🔔 WhatsApp Business API:</b> لإرسال رسائل تلقائية للعملاء، أنشئ تطبيق على Meta Developer Console واحصل على بيانات الاعتماد.
+            <br /><b>الخطوات:</b> (1) اذهب إلى <code style={{direction: 'ltr'}}>developers.facebook.com</code> (2) أنشئ تطبيق وفعّل WhatsApp (3) أضف رقم واتساب موثوق (4) انسخ Phone ID و Business Account ID و Access Token.
           </div>
+
+          <h4 style={{marginTop: 16, marginBottom: 12}}>📱 بيانات اعتماد WhatsApp Business API</h4>
           <div className="grid2">
-            <div className="fld"><label>رقم واتساب المنشأة (للرسائل التلقائية)</label>
+            <div className="fld"><label>رقم واتساب المنشأة الموثوق (الرقم المرسل منه)</label>
               <input dir="ltr" value={integ.whatsappNumber} onChange={e => setInteg({ ...integ, whatsappNumber: e.target.value })} placeholder="+9665XXXXXXXX" /></div>
-            <div className="fld"><label>رابط منصة إيجار (Ejar)</label>
+            <div className="fld"><label>Phone Number ID (من Meta Developer Console)</label>
+              <input dir="ltr" value={integ.whatsappPhoneNumberId} onChange={e => setInteg({ ...integ, whatsappPhoneNumberId: e.target.value })} placeholder="1234567890..." /></div>
+            <div className="fld"><label>Business Account ID (WABA ID)</label>
+              <input dir="ltr" value={integ.whatsappBusinessAccountId} onChange={e => setInteg({ ...integ, whatsappBusinessAccountId: e.target.value })} placeholder="1234567890..." /></div>
+            <div className="fld"><label>Access Token (احفظه بأمان في .env على الخادم)</label>
+              <input type="password" dir="ltr" value={integ.whatsappAccessToken} onChange={e => setInteg({ ...integ, whatsappAccessToken: e.target.value })} placeholder="EAAC..." /></div>
+            <div className="fld"><label>Webhook Token للتحقق (استخدمه في Facebook App Settings → Webhooks)</label>
+              <input dir="ltr" value={integ.whatsappWebhookToken} onChange={e => setInteg({ ...integ, whatsappWebhookToken: e.target.value })} placeholder="your-secret-token" /></div>
+          </div>
+
+          <h4 style={{marginTop: 16, marginBottom: 12}}>🔗 تكاملات أخرى</h4>
+          <div className="grid2">
+            <div className="fld"><label>رابط منصة إيجار (Ejar) - اختياري</label>
               <input dir="ltr" value={integ.ejarBaseUrl} onChange={e => setInteg({ ...integ, ejarBaseUrl: e.target.value })} placeholder="https://www.ejar.sa" /></div>
-            <div className="fld"><label>رابط الموقع المنشور — لبوابة المستأجر</label>
-              <input dir="ltr" value={integ.publicBaseUrl} onChange={e => setInteg({ ...integ, publicBaseUrl: e.target.value })} placeholder="https://your-domain.com" /></div>
             <div className="fld"><label>Webhook للإشعارات الخارجية (اختياري)</label>
               <input dir="ltr" value={integ.webhookUrl} onChange={e => setInteg({ ...integ, webhookUrl: e.target.value })} placeholder="https://hooks.example.com/almazen" /></div>
           </div>

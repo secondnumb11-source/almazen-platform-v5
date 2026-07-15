@@ -75,12 +75,15 @@ export default function CustomersManagement() {
 
 function AddCustomerModal({ onClose, onSaved }) {
   const { profile, toast } = useAuth()
-  const [f, setF] = useState({ full_name: '', id_type: 'national_id', id_number: '', birth_date: '', phone: '', email: '', notes: '' })
+  const [f, setF] = useState({ full_name: '', id_type: 'national_id', id_number: '', birth_date: '', phone: '', email: '', notes: '', nationality: '', passport_number: '' })
   const [idFile, setIdFile] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [agreeTerms, setAgreeTerms] = useState(false)
+  const [agreePrivacy, setAgreePrivacy] = useState(false)
 
   const save = async () => {
     if (!f.full_name || !f.id_number || !f.phone) return toast('أكمل الاسم ورقم الإثبات والجوال', true)
+    if (!agreeTerms || !agreePrivacy) return toast('يجب الموافقة على شروط الاستخدام وسياسة الخصوصية', true)
     setSaving(true)
     const id_document_url = idFile ? await uploadFile(supabase, 'documents', profile.company_id, idFile) : null
     const { error } = await supabase.from('customers').insert({
@@ -100,18 +103,32 @@ function AddCustomerModal({ onClose, onSaved }) {
         <div className="modal-b">
           <div className="grid2">
             <div className="fld"><label>الاسم الكامل *</label><input value={f.full_name} onChange={e => setF({ ...f, full_name: e.target.value })} /></div>
+            <div className="fld"><label>الجنسية *</label><input value={f.nationality} onChange={e => setF({ ...f, nationality: e.target.value })} placeholder="مثال: سعودي" /></div>
             <div className="fld"><label>نوع الإثبات</label>
               <select value={f.id_type} onChange={e => setF({ ...f, id_type: e.target.value })}>
                 {Object.entries(ID_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select></div>
             <div className="fld"><label>رقم الإثبات *</label><input dir="ltr" value={f.id_number} onChange={e => setF({ ...f, id_number: e.target.value })} /></div>
+            <div className="fld"><label>رقم الجواز (اختياري)</label><input dir="ltr" value={f.passport_number} onChange={e => setF({ ...f, passport_number: e.target.value })} /></div>
             <div className="fld"><label>تاريخ الميلاد</label><input type="date" value={f.birth_date} onChange={e => setF({ ...f, birth_date: e.target.value })} /></div>
             <div className="fld"><label>الجوال *</label><input dir="ltr" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></div>
             <div className="fld"><label>البريد الإلكتروني</label><input dir="ltr" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></div>
             <div className="fld"><label>مستند الهوية/الإقامة</label><input type="file" accept="image/*,.pdf" onChange={e => setIdFile(e.target.files?.[0] || null)} /></div>
             <div className="fld" style={{ gridColumn: '1 / -1' }}><label>ملاحظات</label><input value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></div>
+            <div className="fld" style={{ gridColumn: '1 / -1', marginTop: 12 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)} />
+                أوافق على <a href="/terms" target="_blank" style={{ color: 'var(--gold-d)', textDecoration: 'underline' }}>شروط الاستخدام</a> *
+              </label>
+            </div>
+            <div className="fld" style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={agreePrivacy} onChange={e => setAgreePrivacy(e.target.checked)} />
+                أوافق على <a href="/privacy" target="_blank" style={{ color: 'var(--gold-d)', textDecoration: 'underline' }}>سياسة الخصوصية</a> *
+              </label>
+            </div>
           </div>
-          <button className="btn btn-gold" style={{ width: '100%', marginTop: 12 }} disabled={saving} onClick={save}>{saving ? '…جارٍ الحفظ' : 'حفظ العميل'}</button>
+          <button className="btn btn-gold" style={{ width: '100%', marginTop: 12 }} disabled={saving || !agreeTerms || !agreePrivacy} onClick={save}>{saving ? '…جارٍ الحفظ' : 'حفظ العميل'}</button>
         </div>
       </div>
     </div>
@@ -230,6 +247,59 @@ function CustomerDetail({ customer, onClose, onChanged }) {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msgPreview)}`, '_blank')
   }
 
+  // رسالة ترحيبية احترافية
+  const getWelcomeMessage = () => {
+    const activeBooking = (customer.bookings || []).find(b => b.status === 'checked_in') || customer.bookings?.[0]
+    if (!activeBooking || !portalAccts[activeBooking.id]) return ''
+
+    const acct = portalAccts[activeBooking.id]
+    const baseUrl = window.location.origin
+    const portalUrl = `${baseUrl}/tenant-portal?token=${acct.access_token}`
+    const paid = (activeBooking.payments || []).reduce((s, p) => s + num(p.amount), 0)
+    const remaining = num(activeBooking.total_amount) - paid
+
+    return `السلام عليكم ورحمة الله وبركاته،
+
+تشرفنا بضيافتك في ${company?.name || 'منصتنا'}،
+
+فيما يلي بيانات حسابك في بوابة المستأجر:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 بيانات الوحدة:
+الوحدة: ${activeBooking.units?.unit_number}
+الفئة: ${activeBooking.units?.category || '—'}
+مدة الإيجار: ${activeBooking.rent_period === 'daily' ? 'يومي' : activeBooking.rent_period === 'monthly' ? 'شهري' : 'سنوي'}
+
+💰 البيانات المالية:
+قيمة الإيجار: ${SAR(activeBooking.total_amount)}
+المبلغ المدفوع: ${SAR(paid)}
+المبلغ المتبقي: ${SAR(remaining)}
+
+📅 تواريخ الإقامة:
+تاريخ البدء: ${activeBooking.check_in_date}
+تاريخ المغادرة: ${activeBooking.check_out_date}
+
+🔐 بيانات الدخول:
+اسم المستخدم: ${acct.username}
+كلمة المرور: [متوفرة في البوابة]
+
+🔗 رابط البوابة:
+${portalUrl}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ في بوابتك ستجد:
+• نسخة عقدك وفاتورتك الضريبية
+• كشف حسابك الكامل والدفعات
+• تقديم طلبات الصيانة والخدمات
+• مراسلتنا والاستفسار عن أي استفسار
+
+نتمنى لك إقامة مريحة وممتعة، وننتظر استفساراتك عبر بوابتك في أي وقت.
+
+مع أطيب التمنيات،
+فريق ${company?.name || 'المازن'}`
+  }
+
   return (
     <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ width: 'min(820px,100%)' }}>
@@ -334,41 +404,90 @@ function CustomerDetail({ customer, onClose, onChanged }) {
             </tbody>
           </table>
 
-          <h4 className="ts-h4">بيانات دخول بوابة المستأجر</h4>
-          <table className="tbl" style={{ marginBottom: 16 }}>
-            <thead><tr><th>الوحدة</th><th>اسم المستخدم</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-            <tbody>
-              {(customer.bookings || []).filter(b => portalAccts[b.id]).length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد حسابات بوابة</td></tr>}
-              {(customer.bookings || []).map(b => {
-                const acct = portalAccts[b.id]
-                if (!acct) return null
-                return (
-                  <tr key={b.id}>
-                    <td>{b.units?.unit_number}</td>
-                    <td>
-                      {canEditPortal && editingCreds === b.id ? (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <input dir="ltr" defaultValue={acct.username} style={{ width: 110 }} id={`u-${b.id}`}
-                            onKeyDown={e => e.key === 'Enter' && saveUsername(b.id, e.target.value)} />
-                          <button className="btn btn-green btn-sm" onClick={() => saveUsername(b.id, document.getElementById(`u-${b.id}`).value)}>حفظ</button>
-                        </div>
-                      ) : <span dir="ltr">{acct.username}</span>}
-                    </td>
-                    <td><span className={'chip ' + (acct.is_active === false ? 'chip-danger' : 'chip-ok')}>{acct.is_active === false ? 'معطّل' : 'نشط'}</span></td>
-                    <td>
-                      {canEditPortal && <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setEditingCreds(b.id)}>✎ اسم المستخدم</button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => regenToken(b.id)}>🔄 رابط جديد</button>
-                        {acct.is_active === false
-                          ? <button className="btn btn-ghost btn-sm" onClick={() => togglePortal(b.id, true)}>تفعيل</button>
-                          : <button className="btn btn-ghost btn-sm" onClick={() => togglePortal(b.id, false)}>تعطيل</button>}
-                      </div>}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <h4 className="ts-h4">🔐 بيانات دخول بوابة المستأجر</h4>
+          {(customer.bookings || []).filter(b => portalAccts[b.id]).length === 0 ? (
+            <div style={{ padding: 16, background: 'var(--soft)', borderRadius: 8, textAlign: 'center', color: 'var(--muted)', marginBottom: 16 }}>
+              لا توجد حسابات بوابة حالياً. سيتم إنشاء حساب بوابة تلقائياً عند تسليم الوحدة للمستأجر.
+            </div>
+          ) : (
+            (customer.bookings || []).map(b => {
+              const acct = portalAccts[b.id]
+              if (!acct) return null
+              const baseUrl = window.location.origin
+              const portalUrl = `${baseUrl}/tenant-portal?token=${acct.access_token}`
+              return (
+                <div key={b.id} style={{
+                  padding: 16,
+                  background: 'var(--soft)',
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  border: '1px solid var(--line)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: 16 }}>وحدة {b.units?.unit_number}</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{b.units?.category}</div>
+                    </div>
+                    <span className={'chip ' + (acct.is_active === false ? 'chip-danger' : 'chip-ok')}>
+                      {acct.is_active === false ? 'معطّل' : 'نشط'}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    padding: 12,
+                    background: '#fff',
+                    borderRadius: 6,
+                    marginBottom: 12,
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    border: '1px solid var(--line)'
+                  }}>
+                    <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ color: 'var(--muted)', fontSize: 11 }}>اسم المستخدم</div>
+                        <div style={{ fontWeight: 'bold', marginTop: 2 }} dir="ltr">{acct.username}</div>
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(acct.username)
+                          toast('✓ تم نسخ اسم المستخدم')
+                        }}
+                      >
+                        📋 نسخ
+                      </button>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--line)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ color: 'var(--muted)', fontSize: 11 }}>رابط الدخول</div>
+                        <div style={{ fontWeight: 'bold', marginTop: 2, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dir="ltr">{portalUrl}</div>
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(portalUrl)
+                          toast('✓ تم نسخ رابط الدخول')
+                        }}
+                      >
+                        📋 نسخ
+                      </button>
+                    </div>
+                  </div>
+
+                  {canEditPortal && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditingCreds(b.id)}>✎ تعديل اسم المستخدم</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => regenToken(b.id)}>🔄 توليد رابط جديد</button>
+                      {acct.is_active === false
+                        ? <button className="btn btn-ghost btn-sm" onClick={() => togglePortal(b.id, true)}>✅ تفعيل</button>
+                        : <button className="btn btn-ghost btn-sm" onClick={() => togglePortal(b.id, false)}>⛔ تعطيل</button>}
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
 
           <h4 className="ts-h4">سجل نقاط الولاء</h4>
           <table className="tbl" style={{ marginBottom: 16 }}>
@@ -383,14 +502,53 @@ function CustomerDetail({ customer, onClose, onChanged }) {
             </tbody>
           </table>
 
-          <h4 className="ts-h4">إرسال رسالة جاهزة</h4>
+          <h4 className="ts-h4">📨 الرسالة الترحيبية والرسائل المجهزة</h4>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            <button
+              className="btn btn-gold btn-sm"
+              onClick={() => setMsgPreview(getWelcomeMessage())}
+              disabled={!getWelcomeMessage()}
+            >
+              🎁 رسالة ترحيبية احترافية
+            </button>
             {templates.map(t => <button key={t.id} className="btn btn-ghost btn-sm" onClick={() => applyTemplate(t)}>{t.name}</button>)}
           </div>
+
           {msgPreview && (
             <>
-              <textarea className="drawer-notes-area" style={{ minHeight: 90 }} value={msgPreview} onChange={e => setMsgPreview(e.target.value)} dir="auto" />
-              <button className="btn btn-green btn-sm" style={{ marginTop: 8 }} onClick={sendWhatsApp}>💬 إرسال عبر واتساب</button>
+              <div style={{
+                padding: 12,
+                background: 'var(--soft)',
+                borderRadius: 8,
+                marginBottom: 8,
+                border: '1px solid var(--line)',
+                fontSize: 13,
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {msgPreview}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <textarea
+                  className="drawer-notes-area"
+                  style={{ minHeight: 0, flex: 1 }}
+                  value={msgPreview}
+                  onChange={e => setMsgPreview(e.target.value)}
+                  dir="auto"
+                  style={{ display: 'none' }}
+                />
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(msgPreview)
+                    toast('✓ تم نسخ الرسالة')
+                  }}
+                >
+                  📋 نسخ الرسالة
+                </button>
+                <button className="btn btn-green btn-sm" onClick={sendWhatsApp}>💬 إرسال عبر واتساب</button>
+              </div>
             </>
           )}
         </div>

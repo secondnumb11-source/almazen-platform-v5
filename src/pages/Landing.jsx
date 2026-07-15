@@ -53,24 +53,41 @@ export default function Landing({ onLogin }) {
           {HERO_IMGS.map(src => <img key={src} src={src} alt="" loading="eager" />)}
         </div>
         <div className="ld-topbar">
-          <div className="brand-3d" tabIndex={0}
-            onMouseMove={(e) => {
-              const r = e.currentTarget.getBoundingClientRect()
-              const x = ((e.clientX - r.left) / r.width - 0.5) * 2
-              const y = ((e.clientY - r.top) / r.height - 0.5) * 2
-              e.currentTarget.style.setProperty('--rx', (y * -8) + 'deg')
-              e.currentTarget.style.setProperty('--ry', (x * 12) + 'deg')
-              e.currentTarget.style.setProperty('--mx', ((x + 1) * 50) + '%')
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.setProperty('--rx', '0deg')
-              e.currentTarget.style.setProperty('--ry', '0deg')
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="brand-3d" tabIndex={0}
+              onMouseMove={(e) => {
+                const r = e.currentTarget.getBoundingClientRect()
+                const x = ((e.clientX - r.left) / r.width - 0.5) * 2
+                const y = ((e.clientY - r.top) / r.height - 0.5) * 2
+                e.currentTarget.style.setProperty('--rx', (y * -8) + 'deg')
+                e.currentTarget.style.setProperty('--ry', (x * 12) + 'deg')
+                e.currentTarget.style.setProperty('--mx', ((x + 1) * 50) + '%')
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.setProperty('--rx', '0deg')
+                e.currentTarget.style.setProperty('--ry', '0deg')
+              }}>
+              <span className="brand-logo-wrap" aria-hidden="false">
+                <img src={almazenLogo} alt="شعار منصة المازن" className="brand-logo-img" />
+              </span>
+              <span className="brand-text" data-text="منصة المازن">منصة المازن</span>
+              <span className="brand-glow" aria-hidden="true"></span>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginLeft: 12,
+              paddingLeft: 12,
+              borderLeft: '1px solid rgba(255,255,255,0.2)',
+              fontSize: 11,
+              color: '#f0e68c',
+              fontWeight: 600,
+              letterSpacing: '0.5px'
             }}>
-            <span className="brand-logo-wrap" aria-hidden="false">
-              <img src={almazenLogo} alt="شعار منصة المازن" className="brand-logo-img" />
-            </span>
-            <span className="brand-text" data-text="منصة المازن">منصة المازن</span>
-            <span className="brand-glow" aria-hidden="true"></span>
+              <span>🇸🇦</span>
+              <span>تقنية سعودية</span>
+            </div>
           </div>
           <button className="btn btn-gold btn-sm ld-login-btn" onClick={onLogin}>تسجيل الدخول</button>
         </div>
@@ -298,6 +315,93 @@ export default function Landing({ onLogin }) {
           <p className="ld-trial-fine">
             بعد انتهاء الـ 7 أيام يتوقف الحساب تلقائياً حتى تفعيل الاشتراك السنوي (2,500 ر.س) — بلا خصم تلقائي وبلا مفاجآت.
           </p>
+        </div>
+      </section>
+
+      {/* ===== الشعارات الحكومية والعلامات التجارية ===== */}
+      <section className="ld-sec" style={{ background: 'var(--soft)', maxWidth: 'none', paddingTop: 40, paddingBottom: 40 }}>
+        <div style={{ maxWidth: 1180, margin: 'auto', textAlign: 'center' }}>
+          <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 600 }}>✦ تقنية سعودية بنسبة 100%</h3>
+          <p style={{ marginBottom: 32, color: 'var(--muted)', fontSize: 14 }}>منصة المازن متوافقة مع الجهات الحكومية السعودية</p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 24,
+            alignItems: 'center'
+          }}>
+            <div style={{
+              padding: '20px 16px',
+              background: '#fff',
+              borderRadius: 12,
+              border: '1px solid var(--line)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12
+            }}>
+              <span style={{ fontSize: 28 }}>🏛️</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>منصة إيجار</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>وزارة الشؤون البلدية والقروية والإسكان</span>
+            </div>
+
+            <div style={{
+              padding: '20px 16px',
+              background: '#fff',
+              borderRadius: 12,
+              border: '1px solid var(--line)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12
+            }}>
+              <span style={{ fontSize: 28 }}>📊</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>SHOMOOS</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>منصة الاستثمار والإنشاءات</span>
+            </div>
+
+            <div style={{
+              padding: '20px 16px',
+              background: '#fff',
+              borderRadius: 12,
+              border: '1px solid var(--line)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12
+            }}>
+              <span style={{ fontSize: 28 }}>🧾</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>ZATCA</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>هيئة الزكاة والضريبة والجمارك</span>
+            </div>
+
+            <div style={{
+              padding: '20px 16px',
+              background: '#fff',
+              borderRadius: 12,
+              border: '1px solid var(--line)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12
+            }}>
+              <span style={{ fontSize: 28 }}>🎫</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>وزارة السياحة</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>وزارة السياحة والآثار</span>
+            </div>
+          </div>
+
+          <div style={{
+            marginTop: 32,
+            paddingTop: 24,
+            borderTop: '1px solid var(--line)',
+            color: 'var(--muted)',
+            fontSize: 13,
+            lineHeight: 1.6
+          }}>
+            <p>✓ جميع التكاملات والفوترة تتوافق مع المتطلبات السعودية</p>
+            <p>✓ النظام مصمم خصيصاً لقطاع الضيافة والإيجارات في السعودية</p>
+          </div>
         </div>
       </section>
 

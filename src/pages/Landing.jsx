@@ -1,26 +1,33 @@
 import React, { useEffect, useRef } from 'react'
 import almazenLogo from '../assets/almazen-logo.png'
+import saudiTechLogo from '../assets/saudi-tech-logo.svg'
+import logoBooking from '../assets/logo-booking.svg'
+import logoAirbnb from '../assets/logo-airbnb.svg'
+import logoAgoda from '../assets/logo-agoda.svg'
+import logoTrip from '../assets/logo-trip.svg'
+import logoExpedia from '../assets/logo-expedia.svg'
+import logoHotelscom from '../assets/logo-hotelscom.svg'
 
 /* صور فندقية مجانية الاستخدام من Unsplash — تتحرك بتأثير Ken Burns
    وعند عدم توفر الإنترنت تظهر خلفية زرقاء فاخرة بديلة */
-// شركاء مزامنة الحجز العالميين — تُمثَّل بأيقونة واسم موحّد الطراز بدل شعاراتهم
-// الرسمية المسجَّلة (حفاظاً على حقوق الملكية)، بألوان تقريبية لهوية كل منصة
+// شركاء مزامنة الحجز العالميين — الشعارات الرسمية الحقيقية (Simple Icons/Wikimedia
+// Commons بتراخيص تسمح بالاستخدام)، عدا Vrbo غير المتوفر بشعار حر فيُمثَّل برمز
 const CHANNEL_LOGOS = [
-  { name: 'Booking.com', ic: '🔷', clr: '#003580' },
-  { name: 'Airbnb',      ic: '🏡', clr: '#FF385C' },
-  { name: 'Expedia',     ic: '✈️', clr: '#FFC72C' },
-  { name: 'Agoda',       ic: '🌏', clr: '#5D2E8C' },
-  { name: 'Hotels.com',  ic: '🏨', clr: '#D32F2F' },
-  { name: 'Trip.com',    ic: '🧳', clr: '#2F6FED' },
+  { name: 'Booking.com', img: logoBooking },
+  { name: 'Airbnb',      img: logoAirbnb },
+  { name: 'Expedia',     img: logoExpedia },
+  { name: 'Agoda',       img: logoAgoda },
+  { name: 'Hotels.com',  img: logoHotelscom },
+  { name: 'Trip.com',    img: logoTrip },
   { name: 'Vrbo',        ic: '🏖️', clr: '#1E3A5F' },
 ]
 
-// أيقونات مصغّرة لأبرز منصات الحجز — تظهر أسفل شارة "ربط عالمي" في صف الإحصائيات
+// شعارات مصغّرة لأبرز منصات الحجز — تظهر أسفل شارة "ربط عالمي" في صف الإحصائيات
 const MINI_HERO_LOGOS = [
-  { name: 'Booking.com', ic: '🔷', clr: '#003580' },
-  { name: 'Airbnb',      ic: '🏡', clr: '#FF385C' },
-  { name: 'Expedia',     ic: '✈️', clr: '#FFC72C' },
-  { name: 'Tripadvisor', ic: '🦉', clr: '#34E0A1' },
+  { name: 'Booking.com', img: logoBooking },
+  { name: 'Airbnb',      img: logoAirbnb },
+  { name: 'Agoda',       img: logoAgoda },
+  { name: 'Trip.com',    img: logoTrip },
 ]
 
 const HERO_IMGS = [
@@ -93,20 +100,8 @@ export default function Landing({ onLogin }) {
               <span className="brand-text" data-text="منصة المازن">منصة المازن</span>
               <span className="brand-glow" aria-hidden="true"></span>
             </div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              marginLeft: 12,
-              paddingLeft: 12,
-              borderLeft: '1px solid rgba(255,255,255,0.2)',
-              fontSize: 11,
-              color: '#f0e68c',
-              fontWeight: 600,
-              letterSpacing: '0.5px'
-            }}>
-              <span>🇸🇦</span>
-              <span>تقنية سعودية</span>
+            <div className="ld-saudi-tech-badge" title="تقنية سعودية">
+              <img src={saudiTechLogo} alt="تقنية سعودية" />
             </div>
           </div>
           <button className="btn btn-gold btn-sm ld-login-btn" onClick={onLogin}>تسجيل الدخول</button>
@@ -132,7 +127,9 @@ export default function Landing({ onLogin }) {
               <b>🌐 ربط عالمي</b><span>Booking · Airbnb وغيرها</span>
               <div className="ld-mini-logos">
                 {MINI_HERO_LOGOS.map(m => (
-                  <span key={m.name} className="ld-mini-logo" style={{ '--c': m.clr }} title={m.name}>{m.ic}</span>
+                  <span key={m.name} className="ld-mini-logo" title={m.name}>
+                    <img src={m.img} alt={m.name} />
+                  </span>
                 ))}
               </div>
             </div>
@@ -221,8 +218,9 @@ export default function Landing({ onLogin }) {
             <div className="ld-channel-track">
               {[...CHANNEL_LOGOS, ...CHANNEL_LOGOS].map((c, i) => (
                 <div className="ld-channel-chip" key={c.name + i} style={{ '--chip-clr': c.clr }}>
-                  <span className="ld-channel-ic">{c.ic}</span>
-                  <span className="ld-channel-name">{c.name}</span>
+                  {c.img
+                    ? <img className="ld-channel-logo-img" src={c.img} alt={c.name} />
+                    : <><span className="ld-channel-ic">{c.ic}</span><span className="ld-channel-name">{c.name}</span></>}
                 </div>
               ))}
             </div>

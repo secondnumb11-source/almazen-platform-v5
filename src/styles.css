@@ -214,6 +214,17 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .ld-cta .btn{font-size:16.5px;padding:15px 36px;border-radius:14px}
 .ld-topbar{position:absolute;top:0;inset-inline:0;z-index:5;display:flex;justify-content:space-between;align-items:center;max-width:1200px;margin:auto;padding:18px 24px}
 .ld-topbar .logo{color:#fff}
+.ld-saudi-tech-badge{
+  margin-inline-start:14px;padding-inline-start:14px;border-inline-start:1px solid rgba(255,255,255,.2);
+  display:flex;align-items:center;
+}
+.ld-saudi-tech-badge img{
+  height:34px;width:auto;padding:4px 8px;border-radius:8px;
+  background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25);
+  transition:transform .3s;
+}
+.ld-saudi-tech-badge img:hover{transform:translateY(-2px) scale(1.04)}
+@media(max-width:560px){.ld-saudi-tech-badge img{height:26px}}
 .ld-stats{position:relative;z-index:3;display:flex;gap:0;justify-content:center;flex-wrap:wrap;margin-top:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:18px;backdrop-filter:blur(8px);overflow:hidden}
 .ld-stats div{padding:16px 34px;border-inline-start:1px solid rgba(255,255,255,.12)}
 .ld-stats div:first-child{border:none}
@@ -945,13 +956,14 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
 .ld-channel-hero-badge span{position:relative}
-.ld-mini-logos{position:relative;display:flex;gap:6px;justify-content:center;margin-top:8px}
+.ld-mini-logos{position:relative;display:flex;gap:7px;justify-content:center;margin-top:9px}
 .ld-mini-logo{
-  width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;
-  background:radial-gradient(circle at 30% 30%,#fff,var(--c,#2f6fed) 75%);
-  box-shadow:0 3px 8px rgba(0,0,0,.35),inset 0 0 0 1.5px rgba(255,255,255,.5);
+  height:24px;padding:4px 9px;border-radius:8px;display:grid;place-items:center;
+  background:#fff;
+  box-shadow:0 3px 8px rgba(0,0,0,.35);
   transition:transform .3s;
 }
+.ld-mini-logo img{height:100%;width:auto;max-width:56px;object-fit:contain;display:block}
 .ld-channel-hero-badge:hover .ld-mini-logo{transform:translateY(-2px)}
 .ld-channel-hero-badge:hover .ld-mini-logo:nth-child(2){transition-delay:.05s}
 .ld-channel-hero-badge:hover .ld-mini-logo:nth-child(3){transition-delay:.1s}
@@ -1015,19 +1027,20 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 .ld-channel-chip{
   --chip-clr:#C6A24B;
   display:flex;align-items:center;gap:10px;flex:0 0 auto;
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);
-  border-radius:99px;padding:12px 22px;
-  transition:transform .3s, border-color .3s, box-shadow .3s, background .3s;
+  background:#fff;border:1px solid rgba(255,255,255,.5);
+  border-radius:16px;padding:12px 24px;
+  box-shadow:0 6px 18px -6px rgba(0,0,0,.35);
+  transition:transform .3s, border-color .3s, box-shadow .3s;
 }
 .ld-channel-chip:hover{
   transform:translateY(-4px) scale(1.04);
   border-color:var(--chip-clr);
-  background:rgba(255,255,255,.09);
-  box-shadow:0 14px 28px -14px var(--chip-clr);
+  box-shadow:0 16px 30px -12px var(--chip-clr);
 }
-.ld-channel-ic{font-size:20px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
-.ld-channel-name{font-weight:800;font-size:14.5px;color:#eaf1fb;font-family:'Cairo';letter-spacing:.2px;white-space:nowrap}
-@media(max-width:560px){.ld-channel-chip{padding:9px 16px}.ld-channel-name{font-size:13px}}
+.ld-channel-ic{font-size:20px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.2))}
+.ld-channel-name{font-weight:800;font-size:14.5px;color:#1A3A63;font-family:'Cairo';letter-spacing:.2px;white-space:nowrap}
+.ld-channel-logo-img{height:22px;width:auto;max-width:110px;object-fit:contain;display:block}
+@media(max-width:560px){.ld-channel-chip{padding:9px 16px}.ld-channel-name{font-size:13px}.ld-channel-logo-img{height:18px}}
 
 /* ===== مربع "قريباً" فاخر — قسم إيجار ===== */
 .ld-soon-box{

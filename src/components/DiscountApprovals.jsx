@@ -19,20 +19,16 @@ export default function DiscountApprovals() {
 
   const decide = async (r, status) => {
     const note = status === 'approved' ? '' : prompt('سبب الرفض (اختياري):', '') || ''
-    const { error } = await supabase.from('discount_requests').update({
-      status, reviewed_by: profile.id, reviewed_at: new Date().toISOString(), review_note: note
-    }).eq('id', r.id)
+    const { error } = await supabase.rpc('decide_discount_request', {
+      p_request_id: r.id, p_approve: status === 'approved', p_note: note
+    })
     if (error) return toast('خطأ: ' + error.message, true)
-    if (status === 'approved' && r.booking_id) {
-      // ترقية الحجز من pending_approval إلى confirmed
-      await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', r.booking_id).eq('status', 'pending_approval')
-    }
     await logActivity(supabase, profile, {
       action: 'discount', entity: 'discount_requests', entity_id: r.id,
-      summary: `${status === 'approved' ? 'موافقة على' : 'رفض'} خصم ${r.percent}% (${r.amount || 0} ر.س) للوحدة ${r.bookings?.units?.unit_number || '—'}`,
+      summary: `${status === 'approved' ? 'موافقة على' : 'رفض'} خصم ${r.reason_type === 'points' ? r.points_used + ' نقطة' : r.percent + '%'} (${r.amount || 0} ر.س) للوحدة ${r.bookings?.units?.unit_number || '—'}`,
       sensitive: true
     })
-    toast(status === 'approved' ? '✓ تمت الموافقة على الخصم' : 'تم رفض الطلب')
+    toast(status === 'approved' ? '✓ تمت الموافقة — تحدّثت الحسابات تلقائياً' : 'تم رفض الطلب')
     load()
   }
 

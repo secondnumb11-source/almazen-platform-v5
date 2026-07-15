@@ -61,8 +61,7 @@ export default function Home({ onNav }) {
         </div>
         <div className="hero-actions">
           <button className="btn btn-gold btn-sm" onClick={() => onNav?.('dash')}>إدارة الوحدات →</button>
-          {canFinance && <button className="btn btn-ghost btn-sm" onClick={() => onNav?.('reports')}>بوابة المحاسب →</button>}
-          <button className="btn btn-ghost btn-sm" onClick={() => onNav?.('ai')}>المساعد الذكي →</button>
+          {profile?.role === 'accountant' && <button className="btn btn-ghost btn-sm" onClick={() => onNav?.('reports')}>قسم الحسابات →</button>}
         </div>
       </div>
 
@@ -103,15 +102,11 @@ export default function Home({ onNav }) {
               <span className="qa-ico">🏢</span><b>إدارة الوحدات</b>
               <span>حجز، إخلاء، صيانة، تعديل</span>
             </button>
-            <button className="qa-btn" onClick={() => onNav?.('ai')}>
-              <span className="qa-ico">🤖</span><b>المساعد الذكي</b>
-              <span>اسأل بلغة طبيعية → احصل على تقرير</span>
-            </button>
-            {canFinance && <button className="qa-btn" onClick={() => onNav?.('reports')}>
-              <span className="qa-ico">📊</span><b>بوابة المحاسب</b>
+            {profile?.role === 'accountant' && <button className="qa-btn" onClick={() => onNav?.('reports')}>
+              <span className="qa-ico">📊</span><b>قسم الحسابات</b>
               <span>Excel + PDF بالفلاتر التي تختارها</span>
             </button>}
-            {isOwner && <button className="qa-btn" onClick={() => onNav?.('settings')}>
+            {(isOwner || profile?.role === 'accountant') && <button className="qa-btn" onClick={() => onNav?.('settings')}>
               <span className="qa-ico">⚙️</span><b>الإعدادات</b>
               <span>المستخدمون، الفروع، الهوية</span>
             </button>}

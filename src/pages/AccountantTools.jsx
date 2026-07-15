@@ -59,7 +59,6 @@ export default function AccountantTools() {
         <VouchersGroupedTool />
         <ExpensesGroupedTool />
         <UnitPricingListTool units={units} />
-        <AttachmentsTool />
       </div>
     </>
   )
@@ -310,60 +309,6 @@ function UnitPricingListTool() {
         <button className="btn btn-gold btn-sm" disabled={busy} onClick={() => run('xlsx')}>📗 Excel</button>
         <button className="btn btn-blue btn-sm" disabled={busy} onClick={() => run('pdf')}>📄 PDF</button>
       </div>
-    </div>
-  )
-}
-
-/* ================= مركز المرفقات — للمحاسب فقط ================= */
-function AttachmentsTool() {
-  const { profile, toast } = useAuth()
-  const [kind, setKind] = useState('ids')
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(false)
-
-  const load = async (k) => {
-    setLoading(true)
-    const cid = profile.company_id
-    if (k === 'ids') {
-      const { data } = await supabase.from('customers').select('full_name, id_number, id_document_url, phone')
-        .eq('company_id', cid).not('id_document_url', 'is', null)
-      setRows((data || []).map(c => ({ label: c.full_name, sub: c.id_number, url: c.id_document_url })))
-    } else if (k === 'payment_proofs') {
-      const { data } = await supabase.from('payments').select('amount, payment_date, document_url, bookings(customers(full_name))')
-        .eq('company_id', cid).not('document_url', 'is', null).order('payment_date', { ascending: false })
-      setRows((data || []).map(p => ({ label: p.bookings?.customers?.full_name || 'مستأجر', sub: `${p.payment_date} — ${SAR(p.amount)}`, url: p.document_url })))
-    } else if (k === 'invoices') {
-      const { data } = await supabase.from('expenses').select('description, vendor_name, expense_date, amount, invoice_url')
-        .eq('company_id', cid).not('invoice_url', 'is', null).order('expense_date', { ascending: false })
-      setRows((data || []).map(e => ({ label: e.vendor_name || e.description || 'مصروف', sub: `${e.expense_date} — ${SAR(e.amount)}`, url: e.invoice_url })))
-    }
-    setLoading(false)
-  }
-  useEffect(() => { load(kind) }, [kind, profile])
-
-  return (
-    <div className="tool-card" style={{ gridColumn: '1 / -1' }}>
-      <h4>📎 مركز المرفقات — إيصالات، هويات، فواتير</h4>
-      <div className="desc">كل المرفقات التي أدخلها الموظفون عند الحجز أو تسجيل المصروفات، في مكان واحد للمراجعة.</div>
-      <div className="acc-tabs" style={{ marginBottom: 10 }}>
-        <button className={kind === 'ids' ? 'on' : ''} onClick={() => setKind('ids')}>🪪 صور الهويات</button>
-        <button className={kind === 'payment_proofs' ? 'on' : ''} onClick={() => setKind('payment_proofs')}>🧾 إيصالات السداد</button>
-        <button className={kind === 'invoices' ? 'on' : ''} onClick={() => setKind('invoices')}>📄 فواتير المصروفات</button>
-      </div>
-      {loading ? <p style={{ color: 'var(--muted)' }}>جارٍ التحميل…</p> : (
-        <table className="tbl">
-          <thead><tr><th>الجهة</th><th>التفاصيل</th><th></th></tr></thead>
-          <tbody>
-            {rows.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد مرفقات من هذا النوع بعد</td></tr>}
-            {rows.map((r, i) => (
-              <tr key={i}>
-                <td>{r.label}</td><td>{r.sub}</td>
-                <td><a className="btn btn-ghost btn-sm" href={r.url} target="_blank" rel="noreferrer">🔍 عرض</a></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
     </div>
   )
 }

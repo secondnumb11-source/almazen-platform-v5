@@ -28,6 +28,23 @@ const TARGETS = {
     },
     required: ['amount']
   },
+  chart_of_accounts: {
+    label: 'شجرة الحسابات',
+    fields: {
+      code: ['code', 'رمز', 'رقم الحساب', 'account_code'],
+      name: ['name', 'اسم الحساب', 'البيان', 'account_name'],
+      account_type: ['type', 'التصنيف', 'نوع الحساب', 'account_type'],
+      opening_balance: ['balance', 'الرصيد الافتتاحي', 'opening_balance'],
+    },
+    required: ['code', 'name']
+  },
+}
+const ACCOUNT_TYPE_MAP = {
+  asset: 'asset', أصول: 'asset', اصول: 'asset',
+  liability: 'liability', خصوم: 'liability',
+  equity: 'equity', 'حقوق ملكية': 'equity', 'حقوق الملكية': 'equity',
+  revenue: 'revenue', ايرادات: 'revenue', إيرادات: 'revenue',
+  expense: 'expense', مصروفات: 'expense',
 }
 // ملاحظة: الدفعات غير مدرجة هنا لأنها ترتبط إلزامياً بحجز قائم (booking_id) —
 // لا يمكن استيرادها كسجلات مستقلة بأمان؛ تُدخل من داخل شاشة الحجز نفسها.
@@ -112,6 +129,14 @@ export default function DataImport() {
           ...payload, amount: num(mapped.amount), description: mapped.description ? String(mapped.description) : null,
           expense_date: mapped.expense_date ? String(mapped.expense_date).slice(0, 10) : new Date().toISOString().slice(0, 10),
           vendor_name: mapped.vendor_name ? String(mapped.vendor_name) : null, category: 'other'
+        }
+      } else if (targetKey === 'chart_of_accounts') {
+        if (!mapped.name) { failed++; continue }
+        const typeKey = normalize(mapped.account_type || '')
+        payload = {
+          ...payload, code: String(mapped.code), name: String(mapped.name),
+          account_type: ACCOUNT_TYPE_MAP[typeKey] || 'expense',
+          opening_balance: num(mapped.opening_balance || 0)
         }
       }
       const { error } = await supabase.from(targetKey).insert(payload)

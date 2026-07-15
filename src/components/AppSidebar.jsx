@@ -6,13 +6,12 @@ const items = [
   { k: 'home', label: 'الرئيسية', icon: '🏠', roles: 'all' },
   { k: 'dash', label: 'إدارة الوحدات', icon: '🏢', roles: 'all' },
   { k: 'customers', label: 'إدارة العملاء والمستأجرين', icon: '👥', roles: 'all' },
-  { k: 'ops', label: 'العمليات اليومية', icon: '🧰', roles: 'all' },
+  { k: 'ops', label: 'العمليات اليومية', icon: '🧰', roles: 'employee' },
   { k: 'staff', label: 'إدارة الموظفين', icon: '🧑‍💼', roles: 'finance' },
-  { k: 'reports', label: 'بوابة المحاسب', icon: '📊', roles: 'finance' },
+  { k: 'reports', label: 'قسم الحسابات', icon: '📊', roles: 'accountant' },
   { k: 'center', label: 'مركز التقارير والمراقبة', icon: '🛰️', roles: 'finance' },
   { k: 'ejar', label: 'التكامل مع منصة إيجار', icon: '🏛️', roles: 'finance', soon: true },
-  { k: 'ai', label: 'المساعد الذكي', icon: '🤖', roles: 'all' },
-  { k: 'settings', label: 'الإعدادات', icon: '⚙️', roles: 'owner' }
+  { k: 'settings', label: 'الإعدادات', icon: '⚙️', roles: 'owner_or_accountant' }
 ]
 
 function pad(n) { return String(n).padStart(2, '0') }
@@ -65,11 +64,16 @@ function SidebarClock({ collapsed }) {
 
 export default function AppSidebar({ page, setPage, collapsed, onToggle }) {
   const { profile, company, isOwner, canFinance, signOut } = useAuth()
+  const isAccountant = profile?.role === 'accountant'
+  const isEmployee = profile?.role === 'employee'
 
   const visible = items.filter(i =>
     i.roles === 'all' ||
     (i.roles === 'finance' && canFinance) ||
-    (i.roles === 'owner' && isOwner))
+    (i.roles === 'owner' && isOwner) ||
+    (i.roles === 'accountant' && isAccountant) ||
+    (i.roles === 'employee' && isEmployee) ||
+    (i.roles === 'owner_or_accountant' && (isOwner || isAccountant)))
 
   return (
     <aside className={'app-sidebar' + (collapsed ? ' collapsed' : '')}>

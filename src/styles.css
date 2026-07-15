@@ -732,6 +732,25 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
   .voucher-doc{border:none;padding:0}
 }
 
+/* ========= عقد الإيجار الإلكتروني ========= */
+.contract-doc{border:1px solid var(--line);border-radius:14px;padding:26px;font-size:14px;background:linear-gradient(180deg,#fff,#fffdf7)}
+.contract-head{display:flex;align-items:center;gap:16px;border-bottom:3px double var(--gold);padding-bottom:16px;margin-bottom:18px}
+.contract-head img{width:56px;height:56px;object-fit:contain;border-radius:8px}
+.contract-head-info{flex:1}
+.contract-head-info h2{margin:0;font-size:19px;color:var(--blue-2)}
+.contract-head-info div{font-size:11.5px;color:var(--muted);margin-top:2px}
+.contract-qr{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--muted)}
+.contract-title{text-align:center;color:var(--blue-2);margin:0 0 18px;font-size:17px;letter-spacing:.3px}
+.contract-h4{margin:18px 0 10px;color:var(--gold-d,#8b6f2c);font-size:14px;border-bottom:1px dashed var(--line);padding-bottom:6px}
+.contract-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;margin-bottom:8px}
+.contract-grid div{display:flex;flex-direction:column;gap:2px}
+.contract-grid b{font-size:11px;color:var(--muted);font-weight:700}
+.contract-grid span{font-size:14px;font-weight:700;color:var(--blue-2)}
+.contract-note{font-size:11.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px;margin:18px 0 22px;line-height:1.7}
+@media print{
+  .contract-doc{border:none;padding:0;background:none}
+}
+
 /* ========= لوحة إيجار (بوابة المحاسب) ========= */
 .ejar-panel{border-inline-start:4px solid var(--gold)}
 .ejar-note{margin-top:16px;background:var(--soft);border:1px dashed var(--line);border-radius:12px;padding:12px 14px;font-size:12.5px;color:var(--blue-2)}

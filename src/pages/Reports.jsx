@@ -8,7 +8,6 @@ import ReceiptOCR from './ReceiptOCR'
 import AccountantTools from './AccountantTools'
 import AccountingCore from './AccountingCore'
 import DiscountApprovals from '../components/DiscountApprovals'
-import EjarPanel from './EjarPanel'
 
 export default function Reports() {
   const { profile, isOwner, toast } = useAuth()
@@ -71,7 +70,7 @@ export default function Reports() {
 
   return (
     <div>
-      <div className="pg-title"><h2>بوابة المحاسب — التقارير والأدوات الذكية</h2>
+      <div className="pg-title"><h2>قسم الحسابات — التقارير والأدوات الذكية</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-gold btn-sm" onClick={async () => {
             toast('جارٍ تجهيز ملف الحسابات الشامل…')
@@ -84,7 +83,6 @@ export default function Reports() {
 
       <AccountantTools />
       <AccountingCore />
-      <EjarPanel />
       <DiscountApprovals />
       <ExtractionTools />
       <ChartsRow profit={profit} />

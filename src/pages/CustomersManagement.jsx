@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
 import { SAR, num, today } from '../lib/helpers'
+import RentalContract from '../components/RentalContract'
 
 const ID_TYPES = { national_id: 'هوية وطنية', iqama: 'إقامة', passport: 'جواز سفر' }
 
@@ -17,7 +18,13 @@ export default function CustomersManagement() {
   const load = async () => {
     setLoading(true)
     const { data } = await supabase.from('customers')
-      .select('*, bookings(id, total_amount, check_in_date, check_out_date, status, unit_id, units(unit_number))')
+      .select(`*, bookings(
+        id, total_amount, base_price, discount_percent, discount_amount, contract_number,
+        check_in_date, check_out_date, status, rent_period, down_payment, insurance_amount, unit_id,
+        units(unit_number, category, description),
+        payments(amount, payment_type, method, payment_date, reference_number),
+        profiles!bookings_employee_id_fkey(full_name)
+      )`)
       .eq('company_id', profile.company_id).order('full_name')
     setCustomers(data || [])
     setLoading(false)
@@ -72,7 +79,7 @@ function AddCustomerModal({ onClose, onSaved }) {
   const save = async () => {
     if (!f.full_name || !f.id_number || !f.phone) return toast('أكمل الاسم ورقم الإثبات والجوال', true)
     setSaving(true)
-    const { error } = await supabase.from('customers').insert({ ...f, company_id: profile.company_id })
+    const { error } = await supabase.from('customers').insert({ ...f, company_id: profile.company_id, created_by: profile.id })
     setSaving(false)
     if (error) return toast('خطأ: ' + error.message, true)
     toast('✓ أُضيف العميل بنجاح')
@@ -103,12 +110,45 @@ function AddCustomerModal({ onClose, onSaved }) {
 }
 
 function CustomerDetail({ customer, onClose, onChanged }) {
-  const { profile, company, toast } = useAuth()
+  const { profile, company, toast, isOwner } = useAuth()
+  const canEdit = isOwner || profile.role === 'accountant'
   const [loyalty, setLoyalty] = useState([])
   const [templates, setTemplates] = useState([])
   const [portalAccts, setPortalAccts] = useState({})
   const [editingCreds, setEditingCreds] = useState(null)
   const [msgPreview, setMsgPreview] = useState('')
+  const [editingInfo, setEditingInfo] = useState(false)
+  const [infoForm, setInfoForm] = useState({
+    full_name: customer.full_name || '', id_type: customer.id_type || 'national_id',
+    id_number: customer.id_number || '', phone: customer.phone || '', email: customer.email || '', notes: customer.notes || ''
+  })
+  const [savingInfo, setSavingInfo] = useState(false)
+  const [redeemPoints, setRedeemPoints] = useState('')
+  const [redeeming, setRedeeming] = useState(false)
+  const [contractFor, setContractFor] = useState(null)
+
+  const saveInfo = async () => {
+    if (!infoForm.full_name || !infoForm.id_number || !infoForm.phone) return toast('أكمل الاسم ورقم الإثبات والجوال', true)
+    setSavingInfo(true)
+    const { error } = await supabase.from('customers').update(infoForm).eq('id', customer.id)
+    setSavingInfo(false)
+    if (error) return toast('خطأ: ' + error.message, true)
+    toast('✓ حُدّثت بيانات العميل')
+    setEditingInfo(false)
+    onChanged()
+  }
+
+  const doRedeem = async () => {
+    const pts = num(redeemPoints)
+    if (!pts || pts <= 0) return toast('أدخل عدد نقاط صحيحاً', true)
+    setRedeeming(true)
+    const { data, error } = await supabase.rpc('redeem_loyalty_points', { p_customer_id: customer.id, p_points: pts })
+    setRedeeming(false)
+    if (error) return toast('خطأ: ' + error.message, true)
+    toast(`✓ استُبدلت ${pts} نقطة = ${SAR(data)}`)
+    setRedeemPoints('')
+    onChanged()
+  }
 
   useEffect(() => {
     supabase.from('loyalty_transactions').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false })
@@ -165,20 +205,52 @@ function CustomerDetail({ customer, onClose, onChanged }) {
       <div className="modal" style={{ width: 'min(820px,100%)' }}>
         <div className="modal-h"><h3>ملف العميل — {customer.full_name}</h3><button className="x" onClick={onClose}>✕</button></div>
         <div className="modal-b">
-          <div className="ts-grid" style={{ marginBottom: 16 }}>
-            <div><b>نوع الإثبات</b><span>{ID_TYPES[customer.id_type]}</span></div>
-            <div><b>رقم الإثبات</b><span dir="ltr">{customer.id_number}</span></div>
-            <div><b>الجوال</b><span dir="ltr">{customer.phone}</span></div>
-            <div><b>البريد</b><span>{customer.email || '—'}</span></div>
-            <div><b>نقاط الولاء</b><span className="money">{customer.loyalty_points} نقطة</span></div>
-            <div><b>VIP</b><span>{customer.is_vip ? 'نعم' : 'لا'}</span></div>
-          </div>
+          {!editingInfo ? (
+            <div className="ts-grid" style={{ marginBottom: 16 }}>
+              <div><b>نوع الإثبات</b><span>{ID_TYPES[customer.id_type]}</span></div>
+              <div><b>رقم الإثبات</b><span dir="ltr">{customer.id_number}</span></div>
+              <div><b>الجوال</b><span dir="ltr">{customer.phone}</span></div>
+              <div><b>البريد</b><span>{customer.email || '—'}</span></div>
+              <div><b>نقاط الولاء</b><span className="money">{customer.loyalty_points} نقطة</span></div>
+              <div><b>VIP</b><span>{customer.is_vip ? 'نعم' : 'لا'}</span></div>
+              {canEdit && <div style={{ gridColumn: '1 / -1' }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditingInfo(true)}>✎ تعديل بيانات العميل</button>
+              </div>}
+            </div>
+          ) : (
+            <div className="grid2" style={{ marginBottom: 16, background: 'var(--soft)', padding: 12, borderRadius: 8 }}>
+              <div className="fld"><label>الاسم الكامل</label><input value={infoForm.full_name} onChange={e => setInfoForm({ ...infoForm, full_name: e.target.value })} /></div>
+              <div className="fld"><label>نوع الإثبات</label>
+                <select value={infoForm.id_type} onChange={e => setInfoForm({ ...infoForm, id_type: e.target.value })}>
+                  {Object.entries(ID_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select></div>
+              <div className="fld"><label>رقم الإثبات</label><input dir="ltr" value={infoForm.id_number} onChange={e => setInfoForm({ ...infoForm, id_number: e.target.value })} /></div>
+              <div className="fld"><label>الجوال</label><input dir="ltr" value={infoForm.phone} onChange={e => setInfoForm({ ...infoForm, phone: e.target.value })} /></div>
+              <div className="fld"><label>البريد الإلكتروني</label><input dir="ltr" value={infoForm.email} onChange={e => setInfoForm({ ...infoForm, email: e.target.value })} /></div>
+              <div className="fld"><label>ملاحظات</label><input value={infoForm.notes} onChange={e => setInfoForm({ ...infoForm, notes: e.target.value })} /></div>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
+                <button className="btn btn-gold btn-sm" disabled={savingInfo} onClick={saveInfo}>{savingInfo ? '…' : 'حفظ'}</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditingInfo(false)}>إلغاء</button>
+              </div>
+            </div>
+          )}
+
+          {canEdit && (
+            <div className="panel" style={{ marginBottom: 16, background: 'var(--soft)' }}>
+              <b>استبدال نقاط الولاء</b>
+              <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>10 نقاط = 1 ر.س — الرصيد الحالي: {customer.loyalty_points} نقطة</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input type="number" style={{ maxWidth: 140 }} placeholder="عدد النقاط" value={redeemPoints} onChange={e => setRedeemPoints(e.target.value)} />
+                <button className="btn btn-blue btn-sm" disabled={redeeming} onClick={doRedeem}>{redeeming ? '…' : 'استبدال'}</button>
+              </div>
+            </div>
+          )}
 
           <h4 className="ts-h4">سجل الإقامات ({(customer.bookings || []).length})</h4>
           <table className="tbl" style={{ marginBottom: 16 }}>
-            <thead><tr><th>الوحدة</th><th>من</th><th>إلى</th><th>الإجمالي</th><th>بيانات بوابة المستأجر</th></tr></thead>
+            <thead><tr><th>الوحدة</th><th>من</th><th>إلى</th><th>الإجمالي</th><th>بيانات بوابة المستأجر</th><th></th></tr></thead>
             <tbody>
-              {(customer.bookings || []).length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد حجوزات</td></tr>}
+              {(customer.bookings || []).length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد حجوزات</td></tr>}
               {(customer.bookings || []).map(b => {
                 const acct = portalAccts[b.id]
                 return (
@@ -187,7 +259,7 @@ function CustomerDetail({ customer, onClose, onChanged }) {
                     <td className="money">{SAR(b.total_amount)}</td>
                     <td>
                       {acct ? (
-                        editingCreds === b.id ? (
+                        canEdit && editingCreds === b.id ? (
                           <div style={{ display: 'flex', gap: 4 }}>
                             <input dir="ltr" defaultValue={acct.username} style={{ width: 100 }}
                               onKeyDown={e => e.key === 'Enter' && saveUsername(b.id, e.target.value)}
@@ -197,12 +269,15 @@ function CustomerDetail({ customer, onClose, onChanged }) {
                         ) : (
                           <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 12 }}>
                             <span dir="ltr">{acct.username}</span>
-                            <button className="btn btn-ghost btn-sm" onClick={() => setEditingCreds(b.id)}>✎</button>
-                            <button className="btn btn-ghost btn-sm" onClick={() => regenToken(b.id)}>🔄 رمز جديد</button>
+                            {canEdit && <>
+                              <button className="btn btn-ghost btn-sm" onClick={() => setEditingCreds(b.id)}>✎</button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => regenToken(b.id)}>🔄 رمز جديد</button>
+                            </>}
                           </div>
                         )
                       ) : <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>}
                     </td>
+                    <td><button className="btn btn-ghost btn-sm" onClick={() => setContractFor(b)}>🖨 العقد</button></td>
                   </tr>
                 )
               })}
@@ -234,6 +309,16 @@ function CustomerDetail({ customer, onClose, onChanged }) {
           )}
         </div>
       </div>
+      {contractFor && (
+        <RentalContract
+          onClose={() => setContractFor(null)}
+          company={company}
+          employeeName={contractFor.profiles?.full_name}
+          customer={customer}
+          unit={contractFor.units}
+          booking={contractFor}
+        />
+      )}
     </div>
   )
 }

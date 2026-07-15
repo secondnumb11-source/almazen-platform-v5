@@ -10,7 +10,6 @@ import Settings from './pages/Settings'
 import CustomersManagement from './pages/CustomersManagement'
 import EmployeeManagement from './pages/EmployeeManagement'
 import EmployeeOps from './pages/EmployeeOps'
-import Assistant from './pages/Assistant'
 import Home from './pages/Home'
 import PublicUnit from './pages/PublicUnit'
 import TenantPortal from './pages/TenantPortal'
@@ -139,7 +138,7 @@ function Shell() {
   }
 
   const unread = notifs.filter(n => !n.read_at && n.channel === 'in_app').length + evictionAlerts.length
-  const pageTitles = { home:'الرئيسية', dash:'إدارة الوحدات', customers:'إدارة العملاء والمستأجرين', ops:'العمليات اليومية', staff:'إدارة الموظفين', reports:'بوابة المحاسب', center:'مركز التقارير والمراقبة', ejar:'التكامل مع منصة إيجار', ai:'المساعد الذكي', settings:'الإعدادات' }
+  const pageTitles = { home:'الرئيسية', dash:'إدارة الوحدات', customers:'إدارة العملاء والمستأجرين', ops:'العمليات اليومية', staff:'إدارة الموظفين', reports:'قسم الحسابات', center:'مركز التقارير والمراقبة', ejar:'التكامل مع منصة إيجار', settings:'الإعدادات' }
 
   return (
     <div className={'app-shell' + (collapsed ? ' sb-collapsed' : '')}>
@@ -195,11 +194,10 @@ function Shell() {
           {page === 'customers' && <CustomersManagement />}
           {page === 'ops' && <EmployeeOps />}
           {page === 'staff' && canFinance && <EmployeeManagement />}
-          {page === 'reports' && canFinance && <Reports />}
+          {page === 'reports' && profile.role === 'accountant' && <Reports />}
           {page === 'center' && canFinance && <ReportCenter />}
           {page === 'ejar' && canFinance && <EjarPanel />}
-          {page === 'ai' && <Assistant />}
-          {page === 'settings' && isOwner && <Settings />}
+          {page === 'settings' && (isOwner || profile.role === 'accountant') && <Settings />}
         </div>
         <DrawerWidget />
       </div>

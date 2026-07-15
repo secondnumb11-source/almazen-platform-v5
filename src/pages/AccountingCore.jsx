@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../AuthContext'
-import { SAR, num, today, PAY_METHODS, uploadFile } from '../lib/helpers'
+import { SAR, num, today, PAY_METHODS, ROLES, uploadFile } from '../lib/helpers'
+import UnitActivityPanel from '../components/UnitActivityPanel'
+import VoucherPrintModal from '../components/VoucherPrint'
 
 const ACCOUNT_TYPE_LABEL = { asset: 'أصول', liability: 'خصوم', equity: 'حقوق ملكية', revenue: 'إيرادات', expense: 'مصروفات' }
 const PARTY_LABEL = { tenant: 'مستأجر', vendor: 'مورد', employee: 'موظف', other: 'أخرى' }
@@ -19,10 +21,130 @@ export default function AccountingCore() {
         <button className={tab === 'tree' ? 'on' : ''} onClick={() => setTab('tree')}>🌳 شجرة الحسابات</button>
         <button className={tab === 'ledger' ? 'on' : ''} onClick={() => setTab('ledger')}>📒 القيود وكشف الحساب</button>
         <button className={tab === 'vouchers' ? 'on' : ''} onClick={() => setTab('vouchers')}>🧾 السندات</button>
+        <button className={tab === 'attachments' ? 'on' : ''} onClick={() => setTab('attachments')}>📎 مركز المرفقات</button>
+        <button className={tab === 'activity' ? 'on' : ''} onClick={() => setTab('activity')}>📋 النشاط والحسابات</button>
       </div>
       {tab === 'tree' && <ChartOfAccountsTab />}
       {tab === 'ledger' && <LedgerTab />}
       {tab === 'vouchers' && <VouchersTab />}
+      {tab === 'attachments' && <AttachmentsCenter />}
+      {tab === 'activity' && <ActivityAndAccountsTab />}
+    </div>
+  )
+}
+
+/* =====================================================================
+   مركز المرفقات — جميع المستندات المرفوعة في النظام في مكان واحد
+   ===================================================================== */
+function AttachmentsCenter() {
+  const { profile } = useAuth()
+  const [kind, setKind] = useState('ids')
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  const load = async (k) => {
+    setLoading(true)
+    const cid = profile.company_id
+    if (k === 'ids') {
+      const { data } = await supabase.from('customers')
+        .select('full_name, id_number, id_document_url, created_at, profiles(full_name)')
+        .eq('company_id', cid).not('id_document_url', 'is', null).order('created_at', { ascending: false })
+      setRows((data || []).map(c => ({
+        label: c.full_name, sub: 'هوية عميل — ' + (c.id_number || ''),
+        uploader: c.profiles?.full_name || '—', date: c.created_at?.slice(0, 10), url: c.id_document_url
+      })))
+    } else if (k === 'employee_ids') {
+      const { data } = await supabase.from('profiles')
+        .select('full_name, id_photo_url, contract_url, created_at')
+        .eq('company_id', cid)
+      const out = []
+      for (const p of data || []) {
+        if (p.id_photo_url) out.push({ label: p.full_name, sub: 'هوية موظف', uploader: '—', date: p.created_at?.slice(0, 10), url: p.id_photo_url })
+        if (p.contract_url) out.push({ label: p.full_name, sub: 'عقد عمل', uploader: '—', date: p.created_at?.slice(0, 10), url: p.contract_url })
+      }
+      setRows(out)
+    } else if (k === 'payment_proofs') {
+      const { data } = await supabase.from('payments')
+        .select('amount, payment_date, payment_type, document_url, bookings(customers(full_name)), profiles!payments_received_by_fkey(full_name)')
+        .eq('company_id', cid).not('document_url', 'is', null).order('payment_date', { ascending: false })
+      setRows((data || []).map(p => ({
+        label: p.bookings?.customers?.full_name || 'مستأجر',
+        sub: `إيصال سداد (${p.payment_type}) — ${SAR(p.amount)}`,
+        uploader: p.profiles?.full_name || '—', date: p.payment_date, url: p.document_url
+      })))
+    } else if (k === 'invoices') {
+      const { data } = await supabase.from('expenses')
+        .select('description, vendor_name, expense_date, amount, invoice_url, category, profiles!expenses_created_by_fkey(full_name)')
+        .eq('company_id', cid).not('invoice_url', 'is', null).order('expense_date', { ascending: false })
+      setRows((data || []).map(e => ({
+        label: e.vendor_name || e.description || 'مصروف',
+        sub: `فاتورة مصروف (${e.category}) — ${SAR(e.amount)}`,
+        uploader: e.profiles?.full_name || '—', date: e.expense_date, url: e.invoice_url
+      })))
+    }
+    setLoading(false)
+  }
+  useEffect(() => { load(kind) }, [kind, profile])
+
+  return (
+    <div>
+      <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 12 }}>
+        كل المرفقات التي يرفعها الموظفون والمحاسبون في النظام — إيصالات السداد، فواتير المصروفات، صور الهويات والعقود — في مكان واحد للمراجعة.
+      </p>
+      <div className="acc-tabs" style={{ marginBottom: 10 }}>
+        <button className={kind === 'ids' ? 'on' : ''} onClick={() => setKind('ids')}>🪪 هويات العملاء</button>
+        <button className={kind === 'employee_ids' ? 'on' : ''} onClick={() => setKind('employee_ids')}>🧑‍💼 هويات وعقود الموظفين</button>
+        <button className={kind === 'payment_proofs' ? 'on' : ''} onClick={() => setKind('payment_proofs')}>🧾 إيصالات السداد</button>
+        <button className={kind === 'invoices' ? 'on' : ''} onClick={() => setKind('invoices')}>📄 فواتير المصروفات</button>
+      </div>
+      {loading ? <p style={{ color: 'var(--muted)' }}>جارٍ التحميل…</p> : (
+        <table className="tbl">
+          <thead><tr><th>الجهة</th><th>سبب الرفع</th><th>رفعه</th><th>التاريخ</th><th></th></tr></thead>
+          <tbody>
+            {rows.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا توجد مرفقات من هذا النوع بعد</td></tr>}
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td>{r.label}</td><td>{r.sub}</td><td>{r.uploader}</td><td>{r.date}</td>
+                <td><a className="btn btn-ghost btn-sm" href={r.url} target="_blank" rel="noreferrer">🔍 عرض</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+/* =====================================================================
+   النشاط والحسابات — نسخة داخل قسم الحسابات (نفس المحتوى الموجود في
+   إدارة الموظفين، مُتاحة هنا أيضاً لتسهيل مراجعة المحاسب)
+   ===================================================================== */
+function ActivityAndAccountsTab() {
+  const { profile } = useAuth()
+  const [staff, setStaff] = useState([])
+  useEffect(() => {
+    supabase.from('profiles').select('full_name, role, username, job_title, salary, hire_date')
+      .eq('company_id', profile.company_id).order('full_name')
+      .then(({ data }) => setStaff(data || []))
+  }, [profile])
+
+  return (
+    <div>
+      <h4 className="ts-h4">قائمة الحسابات (ملخص)</h4>
+      <table className="tbl" style={{ marginBottom: 20 }}>
+        <thead><tr><th>الاسم</th><th>الدور</th><th>اسم المستخدم</th><th>المسمى الوظيفي</th><th>الراتب</th><th>تاريخ التعيين</th></tr></thead>
+        <tbody>
+          {staff.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>لا يوجد موظفون</td></tr>}
+          {staff.map((s, i) => (
+            <tr key={i}>
+              <td>{s.full_name}</td><td>{ROLES[s.role]}</td><td dir="ltr">{s.username || '—'}</td>
+              <td>{s.job_title || '—'}</td><td className="money">{SAR(s.salary)}</td><td dir="ltr">{s.hire_date || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h4 className="ts-h4">نشاط الوحدات</h4>
+      <UnitActivityPanel />
     </div>
   )
 }
@@ -296,53 +418,6 @@ function VouchersTab() {
       </table>
 
       {printing && <VoucherPrintModal voucher={printing} company={company} onClose={() => setPrinting(null)} />}
-    </div>
-  )
-}
-
-function VoucherPrintModal({ voucher: v, company, onClose }) {
-  return (
-    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ width: 'min(680px,100%)' }}>
-        <div className="modal-h">
-          <h3>{v.voucher_type === 'receipt' ? 'سند قبض' : 'سند صرف'}</h3>
-          <button className="x" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-b" id="voucher-print">
-          <div className="voucher-doc">
-            <div className="voucher-head">
-              {company?.logo_url && <img src={company.logo_url} alt="logo" />}
-              <div className="voucher-head-info">
-                <h2>{company?.name || 'المازن'}</h2>
-                <div>الرقم الضريبي: {company?.vat_number || '—'} · {company?.address || ''}</div>
-              </div>
-              <div className={'voucher-badge ' + (v.voucher_type === 'receipt' ? 'in' : 'out')}>
-                {v.voucher_type === 'receipt' ? 'سند قبض' : 'سند صرف'}
-              </div>
-            </div>
-            <div className="voucher-grid">
-              <div><b>رقم السند</b><span dir="ltr">{v.voucher_number}</span></div>
-              <div><b>التاريخ</b><span>{v.voucher_date}</span></div>
-              <div><b>{v.voucher_type === 'receipt' ? 'استلمنا من' : 'صرفنا إلى'}</b><span>{v.party_name}</span></div>
-              <div><b>التصنيف</b><span>{PARTY_LABEL[v.party_type]}</span></div>
-              <div><b>طريقة الدفع</b><span>{PAY_METHODS[v.payment_method]}</span></div>
-              <div><b>رقم المرجع</b><span dir="ltr">{v.reference_number || '—'}</span></div>
-            </div>
-            <div className="voucher-amount">
-              <span>وذلك مبلغ وقدره</span>
-              <b className="money">{SAR(v.amount)}</b>
-            </div>
-            <div className="voucher-desc"><b>البيان:</b> {v.description || '—'}</div>
-            <div className="voucher-sign">
-              <div><span>توقيع المُسلِّم</span><i /></div>
-              <div><span>توقيع المستلم</span><i /></div>
-            </div>
-          </div>
-        </div>
-        <div className="modal-f no-print">
-          <button className="btn btn-gold" onClick={() => window.print()}>🖨 طباعة</button>
-        </div>
-      </div>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { SAR, num, today, CATS, STATUS, PAY_METHODS, DEFAULT_FURNITURE, shareUrl
 import { QRCodeSVG } from 'qrcode.react'
 import HandoverModal from '../components/HandoverModal'
 import TenantSummary from '../components/TenantSummary'
+import RentalContract from '../components/RentalContract'
 
 /* ============ الشاشة الرئيسية للوحدات ============ */
 export default function Units() {
@@ -290,7 +291,7 @@ function UnitForm({ unit, onClose }) {
 
 /* ============ مودال الوحدة: تفاصيل/صور/تقويم/تاريخ/حجز ============ */
 function UnitModal({ unit, onClose }) {
-  const { profile, isOwner, toast } = useAuth()
+  const { profile, isOwner, toast, company } = useAuth()
   const [tab, setTab] = useState('info')
   const [media, setMedia] = useState([])
   const [bookings, setBookings] = useState([])
@@ -298,6 +299,7 @@ function UnitModal({ unit, onClose }) {
   const [handover, setHandover] = useState(null)   // 'check_in' | 'check_out' | null
   const [summaryFor, setSummaryFor] = useState(null)
   const [autoWelcome, setAutoWelcome] = useState(false)
+  const [contractFor, setContractFor] = useState(null)
   const [hFilter, setHFilter] = useState({ cust: '', from: '', to: '' })
   const active = bookings.find(b => ['confirmed', 'checked_in'].includes(b.status))
 
@@ -305,7 +307,7 @@ function UnitModal({ unit, onClose }) {
     const { data: md } = await supabase.from('unit_media').select('*').eq('unit_id', unit.id).order('sort_order')
     setMedia(md || [])
     const { data: bk } = await supabase.from('bookings')
-      .select('*, customers(full_name, phone, id_number), payments(amount, payment_type, method, payment_date, reference_number)')
+      .select('*, customers(full_name, phone, id_number), payments(amount, payment_type, method, payment_date, reference_number), profiles!bookings_employee_id_fkey(full_name)')
       .eq('unit_id', unit.id).order('check_in_date', { ascending: false })
     setBookings(bk || [])
   }, [unit.id])
@@ -456,6 +458,7 @@ function UnitModal({ unit, onClose }) {
                   {active && active.status === 'checked_in' &&
                     <button className="btn btn-blue btn-sm" onClick={() => setHandover('check_out')}>📥 استلام من المستأجر عند الإخلاء (Check-out List)</button>}
                   {active && <button className="btn btn-ghost btn-sm" onClick={() => setSummaryFor(active)}>🖨 ملخص الإيجار للمستأجر</button>}
+                  {active && <button className="btn btn-ghost btn-sm" onClick={() => setContractFor(active)}>🖨 عقد الإيجار</button>}
                   {['cleaning', 'maintenance'].includes(unit.status) &&
                     <button className="btn btn-green btn-sm" onClick={() => setStatus('available')}>إنهاء التنظيف/الصيانة → متاح</button>}
                   {unit.status === 'available' &&
@@ -510,6 +513,16 @@ function UnitModal({ unit, onClose }) {
         onClose={(saved) => { setHandover(null); if (saved) load() }} />}
       {summaryFor && <TenantSummary booking={summaryFor} unit={unit} autoSend={autoWelcome}
         onClose={() => { setSummaryFor(null); setAutoWelcome(false) }} />}
+      {contractFor && (
+        <RentalContract
+          onClose={() => setContractFor(null)}
+          company={company}
+          employeeName={contractFor.profiles?.full_name}
+          customer={contractFor.customers}
+          unit={{ unit_number: unit.unit_number, category: CATS[unit.category] || unit.category, description: unit.description }}
+          booking={contractFor}
+        />
+      )}
     </div>
   )
 }
@@ -549,6 +562,7 @@ function BookingForm({ unit, active, onDone }) {
   const { profile, isOwner, canFinance, company, toast } = useAuth()
   const [busy, setBusy] = useState(false)
   const [invoice, setInvoice] = useState(null)
+  const [showContract, setShowContract] = useState(false)
   const [f, setF] = useState({
     name: '', idType: 'national_id', idNumber: '', phone: '', companion: '',
     customer_type: 'individual',  // 'individual' | 'company'
@@ -595,7 +609,7 @@ function BookingForm({ unit, active, onDone }) {
       if (!cust) {
         const { data: nc, error } = await supabase.from('customers').insert({
           company_id: cid, full_name: f.name, id_type: f.idType,
-          id_number: f.idNumber, phone: f.phone, id_document_url: idUrl
+          id_number: f.idNumber, phone: f.phone, id_document_url: idUrl, created_by: profile.id
         }).select('id').single()
         if (error) throw error
         cust = nc
@@ -805,7 +819,7 @@ function BookingForm({ unit, active, onDone }) {
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
-        <button className="btn btn-ghost" onClick={() => window.print()}>🖨 عقد إلكتروني مبدئي</button>
+        <button className="btn btn-ghost" onClick={() => setShowContract(true)}>🖨 عقد إلكتروني مبدئي</button>
         <button className="btn btn-ghost" onClick={issueInvoice}>🧾 فاتورة مبسطة ZATCA</button>
         {unit.status === 'available' && <>
           <button className="btn btn-gold" disabled={busy} onClick={() => createBooking('confirmed')}>تأكيد الحجز (← برتقالي)</button>
@@ -827,6 +841,27 @@ function BookingForm({ unit, active, onDone }) {
       </div>
 
       {invoice && <InvoiceView inv={invoice} company={company} customer={f.name} onClose={() => setInvoice(null)} />}
+
+      {showContract && (
+        <RentalContract
+          onClose={() => setShowContract(false)}
+          company={company}
+          employeeName={profile.full_name}
+          customer={{ full_name: f.name || 'مستأجر', id_number: f.idNumber, phone: f.phone }}
+          unit={{ unit_number: unit.unit_number, category: CATS[unit.category] || unit.category, description: unit.description }}
+          booking={{
+            id: active?.id, contract_number: active?.contract_number,
+            check_in_date: f.inDate, check_out_date: f.outDate,
+            rent_period: f.period, base_price: gross, discount_percent: num(f.discount),
+            total_amount: total, down_payment: num(f.downPayment), insurance_amount: num(f.insurance),
+            payments: [
+              ...(num(f.downPayment) > 0 ? [{ payment_date: today(), payment_type: 'down_payment', method: f.method, amount: num(f.downPayment) }] : []),
+              ...(num(f.insurance) > 0 ? [{ payment_date: today(), payment_type: 'insurance', method: f.method, amount: num(f.insurance) }] : []),
+              ...(num(f.payNow) > 0 ? [{ payment_date: today(), payment_type: 'rent', method: f.method, amount: num(f.payNow) }] : []),
+            ]
+          }}
+        />
+      )}
     </div>
   )
 }

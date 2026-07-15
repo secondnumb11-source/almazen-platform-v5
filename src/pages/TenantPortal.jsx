@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { SAR, PAY_METHODS } from '../lib/helpers'
+import RentalContract from '../components/RentalContract'
 
 const REQ_TYPES = { extension: 'تمديد الإيجار', extra_service: 'خدمة إضافية', maintenance: 'صيانة', complaint: 'شكوى / ملاحظة' }
 const REQ_STATUS = { new: 'جديد', in_progress: 'قيد المعالجة', done: 'مكتمل', rejected: 'مرفوض' }
@@ -226,6 +227,7 @@ function Statement({ b }) {
 
 /* ================= المستندات ================= */
 function Docs({ b, company, customer }) {
+  const [showContract, setShowContract] = useState(false)
   if (!b) return <EmptyState text="لا توجد مستندات بعد." />
   return (
     <div className="grid2">
@@ -242,19 +244,22 @@ function Docs({ b, company, customer }) {
         <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>لطلب نسخة مطبوعة تواصل مع المنشأة من تبويب الطلبات.</p>
       </div>
       <div className="panel">
-        <h3>ملخص العقد للطباعة</h3>
-        <div id="tp-contract-print" className="tp-contract">
-          <h4>{company?.name}</h4>
-          <p>الرقم الضريبي: {company?.vat_number || '—'}</p>
-          <hr />
-          <p><b>المستأجر:</b> {customer?.full_name} — {customer?.phone}</p>
-          <p><b>الوحدة:</b> {b.unit?.unit_number} — {b.unit?.category}</p>
-          <p><b>المدة:</b> {b.check_in_date} ← {b.check_out_date}</p>
-          <p><b>القيمة الإجمالية:</b> {SAR(b.total_amount)}</p>
-          {b.ejar_status === 'registered' && <p><b>رقم عقد إيجار الرسمي:</b> {b.ejar_contract_number}</p>}
-        </div>
-        <button className="btn btn-gold btn-sm" onClick={() => window.print()}>🖨 طباعة / حفظ PDF</button>
+        <h3>عقد الإيجار</h3>
+        <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>
+          عقد إيجارك الإلكتروني الكامل — الوحدة، المدة، القيمة، بيان السداد، والموظف المسؤول عن العقد.
+        </p>
+        <button className="btn btn-gold btn-sm" onClick={() => setShowContract(true)}>🖨 عرض وطباعة عقد الإيجار</button>
       </div>
+      {showContract && (
+        <RentalContract
+          onClose={() => setShowContract(false)}
+          company={company}
+          employeeName={b.employee_name}
+          customer={customer}
+          unit={b.unit}
+          booking={b}
+        />
+      )}
     </div>
   )
 }

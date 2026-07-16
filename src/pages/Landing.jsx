@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import almazenLogo from '../assets/almazen-logo.png'
 import saudiTechLogo from '../assets/saudi-tech-logo.svg'
-import logoBooking from '../assets/logo-booking.svg'
+import logoBooking from '../assets/logo-booking-wordmark.svg'
 import logoAirbnb from '../assets/logo-airbnb.svg'
 import logoAgoda from '../assets/logo-agoda.svg'
 import logoTrip from '../assets/logo-trip.svg'

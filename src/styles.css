@@ -225,13 +225,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 }
 .ld-saudi-tech-badge img:hover{transform:translateY(-2px) scale(1.04)}
 @media(max-width:560px){.ld-saudi-tech-badge img{height:26px}}
-.ld-stats{position:relative;z-index:3;display:flex;flex-direction:column;margin:34px auto 0;
-  max-width:880px;width:100%;
+.ld-stats{position:relative;z-index:3;display:flex;flex-direction:column;margin:30px auto 0;
+  max-width:1120px;width:100%;
   background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);border-radius:20px;
   backdrop-filter:blur(10px);overflow:hidden;
   box-shadow:0 24px 60px -28px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12)}
 .ld-stats-row{display:flex;gap:0;justify-content:center;flex-wrap:wrap}
-.ld-stats-row > div{flex:1 1 auto;padding:15px 18px;border-inline-start:1px solid rgba(255,255,255,.12);text-align:center}
+.ld-stats-row > div{flex:1 1 auto;padding:12px 18px;border-inline-start:1px solid rgba(255,255,255,.12);text-align:center}
 .ld-stats-row > div:first-child{border:none}
 .ld-stats-row b{display:block;font-family:'Cairo';font-size:23px;color:var(--gold-l)}
 .ld-stats-row span{font-size:11.5px;color:#C7D5E6;white-space:nowrap}
@@ -951,46 +951,50 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 /* لوحة "ربط فوري مع منصات الحجز العالمية" — قسم مميَّز داخل صندوق الإحصائيات */
 .ld-hero-channels{
   position:relative;cursor:pointer;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;gap:14px;
-  padding:20px 26px 22px;border-top:1px solid rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:13px 26px;border-top:1px solid rgba(255,255,255,.14);
   background:linear-gradient(120deg,rgba(47,111,237,.16),rgba(198,162,75,.09));
   transition:background .3s;
 }
 .ld-hero-channels:hover{background:linear-gradient(120deg,rgba(47,111,237,.24),rgba(198,162,75,.14))}
 .ld-hero-channels::before{
   content:"";position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(circle at 50% 0%,rgba(198,162,75,.2),transparent 65%);
+  background:radial-gradient(circle at 12% 50%,rgba(198,162,75,.2),transparent 60%);
   animation:ld-channel-badge-pulse 2.6s ease-in-out infinite;
 }
 @keyframes ld-channel-badge-pulse{0%,100%{opacity:.5}50%{opacity:1}}
-.ld-hero-channels-label{position:relative;text-align:center}
+.ld-hero-channels-label{position:relative;text-align:start;min-width:230px}
 .ld-hero-channels-label b{
-  display:block;font-family:'Cairo';font-size:18px;
+  display:block;font-family:'Cairo';font-size:17px;
   background:linear-gradient(180deg,#a9d2ff,#4f8bf5);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
-.ld-hero-channels-label span{display:block;margin-top:4px;font-size:12px;color:#C7D5E6}
+.ld-hero-channels-label span{display:block;margin-top:3px;font-size:11.5px;color:#C7D5E6}
 
-.ld-mini-logos{position:relative;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.ld-mini-logos{position:relative;display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
 .ld-mini-logo{
-  height:44px;padding:8px 16px;border-radius:12px;display:grid;place-items:center;
+  height:44px;padding:9px 16px;border-radius:12px;display:flex;align-items:center;justify-content:center;
   background:#fff;
   box-shadow:0 5px 14px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,255,255,.6);
   transition:transform .3s, box-shadow .3s;
 }
 .ld-mini-logo:hover{transform:translateY(-4px) scale(1.07);box-shadow:0 10px 22px rgba(0,0,0,.55)}
-.ld-mini-logo img{height:100%;width:auto;max-width:104px;object-fit:contain;display:block}
+.ld-mini-logo img{height:100%;width:auto;max-width:160px;object-fit:contain;display:block}
+@media(max-width:900px){
+  .ld-hero-channels{justify-content:center}
+  .ld-hero-channels-label{text-align:center;min-width:0}
+}
 @media(max-width:640px){
-  .ld-hero-channels{padding:16px 16px 18px}
-  .ld-hero-channels-label b{font-size:15.5px}
-  .ld-mini-logo{height:34px;padding:6px 11px}
-  .ld-mini-logo img{max-width:76px}
+  .ld-hero-channels{padding:12px 16px}
+  .ld-hero-channels-label b{font-size:15px}
+  .ld-mini-logo{height:34px;padding:7px 11px}
+  .ld-mini-logo img{max-width:110px}
 }
 
 /* شارة "تقنية سعودية" داخل صندوق الإحصائيات — مميّزة وواضحة في شريط ختامي */
 .ld-saudi-tech-inline{
   position:relative;display:flex;align-items:center;justify-content:center;gap:14px;
-  padding:14px 20px;border-top:1px solid rgba(255,255,255,.14);
+  padding:9px 20px;border-top:1px solid rgba(255,255,255,.14);
   background:linear-gradient(120deg,rgba(31,157,106,.16),rgba(0,0,0,.14));
 }
 .ld-saudi-tech-inline::before{
@@ -998,7 +1002,7 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
   background:linear-gradient(90deg,transparent,rgba(125,227,184,.6),transparent);
 }
 .ld-saudi-tech-inline img{
-  height:46px;width:auto;padding:5px 10px;border-radius:10px;background:#fff;
+  height:42px;width:auto;padding:4px 9px;border-radius:10px;background:#fff;
   box-shadow:0 5px 14px rgba(0,0,0,.4), 0 0 0 1.5px rgba(125,227,184,.35);
   transition:transform .3s;
 }

@@ -7,6 +7,7 @@ import logoAgoda from '../assets/logo-agoda.svg'
 import logoTrip from '../assets/logo-trip.svg'
 import logoExpedia from '../assets/logo-expedia.svg'
 import logoHotelscom from '../assets/logo-hotelscom.svg'
+import logoTripadvisor from '../assets/logo-tripadvisor.svg'
 
 /* صور فندقية مجانية الاستخدام من Unsplash — تتحرك بتأثير Ken Burns
    وعند عدم توفر الإنترنت تظهر خلفية زرقاء فاخرة بديلة */
@@ -22,12 +23,14 @@ const CHANNEL_LOGOS = [
   { name: 'Vrbo',        ic: '🏖️', clr: '#1E3A5F' },
 ]
 
-// شعارات مصغّرة لأبرز منصات الحجز — تظهر أسفل شارة "ربط عالمي" في صف الإحصائيات
+// شعارات منصات الحجز — تظهر داخل بطاقة "ربط عالمي" في صف الإحصائيات
 const MINI_HERO_LOGOS = [
   { name: 'Booking.com', img: logoBooking },
   { name: 'Airbnb',      img: logoAirbnb },
   { name: 'Agoda',       img: logoAgoda },
   { name: 'Trip.com',    img: logoTrip },
+  { name: 'Expedia',     img: logoExpedia },
+  { name: 'Tripadvisor', img: logoTripadvisor },
 ]
 
 const HERO_IMGS = [
@@ -119,12 +122,19 @@ export default function Landing({ onLogin }) {
               onClick={() => document.getElementById('trial').scrollIntoView({ behavior: 'smooth' })}>ابدأ تجربتك المجانية ✦</button>
           </div>
           <div className="ld-stats reveal d3">
-            <div><b><span data-count="120" data-suffix="+">0</span></b><span>منشأة تعتمد علينا</span></div>
-            <div><b><span data-count="8500" data-suffix="+">0</span></b><span>وحدة تُدار يومياً</span></div>
-            <div><b><span data-count="99.9" data-suffix="%">0</span></b><span>دقة الحسابات</span></div>
-            <div><b>ZATCA</b><span>فوترة متوافقة</span></div>
-            <div className="ld-channel-hero-badge" onClick={() => document.getElementById('channels').scrollIntoView({ behavior: 'smooth' })}>
-              <b>🌐 ربط عالمي</b><span>Booking · Airbnb وغيرها</span>
+            <div className="ld-stats-row">
+              <div><b><span data-count="120" data-suffix="+">0</span></b><span>منشأة تعتمد علينا</span></div>
+              <div><b><span data-count="8500" data-suffix="+">0</span></b><span>وحدة تُدار يومياً</span></div>
+              <div><b><span data-count="99.9" data-suffix="%">0</span></b><span>دقة الحسابات</span></div>
+              <div><b>ZATCA</b><span>فوترة متوافقة</span></div>
+              <div className="ld-ejar-badge"><b>🏛️ إيجار</b><span>قريباً</span></div>
+            </div>
+
+            <div className="ld-hero-channels" onClick={() => document.getElementById('channels').scrollIntoView({ behavior: 'smooth' })}>
+              <div className="ld-hero-channels-label">
+                <b>🌐 ربط فوري مع منصات الحجز العالمية</b>
+                <span>مزامنة لحظية للأسعار والإتاحة والحجوزات — بلا لمسة يدوية</span>
+              </div>
               <div className="ld-mini-logos">
                 {MINI_HERO_LOGOS.map(m => (
                   <span key={m.name} className="ld-mini-logo" title={m.name}>
@@ -133,7 +143,11 @@ export default function Landing({ onLogin }) {
                 ))}
               </div>
             </div>
-            <div className="ld-ejar-badge"><b>🏛️ إيجار</b><span>قريباً</span></div>
+
+            <div className="ld-saudi-tech-inline">
+              <img src={saudiTechLogo} alt="تقنية سعودية" />
+              <span>مبنية بالكامل بتقنية سعودية 100%</span>
+            </div>
           </div>
         </div>
       </section>

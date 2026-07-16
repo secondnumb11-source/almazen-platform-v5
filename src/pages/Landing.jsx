@@ -109,7 +109,7 @@ export default function Landing({ onLogin }) {
           </div>
           <button className="btn btn-gold btn-sm ld-login-btn" onClick={onLogin}>تسجيل الدخول</button>
         </div>
-        <div className="in">
+        <div className="ld-hero-content">
           <span className="ld-badge">✦ منصة سعودية احترافية لإدارة الضيافة والتأجير</span>
           <h1>المازن — إدارة فاخرة لإيجارات الشقق المفروشة والشاليهات والوحدات العقارية</h1>
           <p className="lead">
@@ -121,6 +121,7 @@ export default function Landing({ onLogin }) {
             <button className="btn btn-ghost" style={{ background: 'rgba(255,255,255,.1)', color: '#fff', borderColor: 'rgba(255,255,255,.35)' }}
               onClick={() => document.getElementById('trial').scrollIntoView({ behavior: 'smooth' })}>ابدأ تجربتك المجانية ✦</button>
           </div>
+          <div className="ld-stats-breakout">
           <div className="ld-stats reveal d3">
             <div className="ld-stats-row">
               <div><b><span data-count="120" data-suffix="+">0</span></b><span>منشأة تعتمد علينا</span></div>
@@ -148,6 +149,7 @@ export default function Landing({ onLogin }) {
               <img src={saudiTechLogo} alt="تقنية سعودية" />
               <span>مبنية بالكامل بتقنية سعودية 100%</span>
             </div>
+          </div>
           </div>
         </div>
       </section>

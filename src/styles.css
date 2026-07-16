@@ -205,7 +205,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .ld-bg img:nth-child(3){animation-delay:16s}
 @keyframes kb{0%{opacity:0;transform:scale(1.08)}6%{opacity:1}33%{opacity:1;transform:scale(1)}42%{opacity:0}100%{opacity:0}}
 .ld-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,35,64,.72),rgba(14,35,64,.55) 50%,rgba(14,35,64,.85))}
-.ld-hero .in{position:relative;z-index:2;max-width:860px;padding:40px 22px;animation:fadeUp .8s both}
+.ld-hero .ld-hero-content{position:relative;z-index:2;max-width:860px;padding:40px 22px;animation:fadeUp .8s both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}}
 .ld-hero h1{font-size:52px;font-weight:900;line-height:1.3;margin:18px 0 14px}
 .ld-hero .lead{font-size:18px;color:#DCE6F3;max-width:60ch;margin:auto}
@@ -225,13 +225,18 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 }
 .ld-saudi-tech-badge img:hover{transform:translateY(-2px) scale(1.04)}
 @media(max-width:560px){.ld-saudi-tech-badge img{height:26px}}
-.ld-stats{position:relative;z-index:3;display:flex;flex-direction:column;margin:30px auto 0;
-  max-width:1120px;width:100%;
+/* يكسر قيد max-width:860px الموروث من .ld-hero .ld-hero-content (الحاوية النصية أعلاه) —
+   الأسلوب المعتاد لهذا الكسر: عرض 100vw + هوامش calc(50% - 50vw) يُلغيان
+   أثر عرض الأب مهما كان (محاولة سابقة بـ left:50%/translateX فشلت لأن
+   left هنا نسبي لعرض الأب الضيّق نفسه لا لعرض الصفحة الفعلي). */
+.ld-stats-breakout{width:100vw;margin-inline:calc(50% - 50vw);display:flex;justify-content:center;padding:0 3vw}
+.ld-stats{position:relative;z-index:3;display:flex;flex-direction:column;width:100%;max-width:1180px;
+  margin-top:26px;
   background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);border-radius:20px;
   backdrop-filter:blur(10px);overflow:hidden;
   box-shadow:0 24px 60px -28px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12)}
 .ld-stats-row{display:flex;gap:0;justify-content:center;flex-wrap:wrap}
-.ld-stats-row > div{flex:1 1 auto;padding:12px 18px;border-inline-start:1px solid rgba(255,255,255,.12);text-align:center}
+.ld-stats-row > div{flex:1 1 auto;padding:10px 18px;border-inline-start:1px solid rgba(255,255,255,.12);text-align:center}
 .ld-stats-row > div:first-child{border:none}
 .ld-stats-row b{display:block;font-family:'Cairo';font-size:23px;color:var(--gold-l)}
 .ld-stats-row span{font-size:11.5px;color:#C7D5E6;white-space:nowrap}
@@ -952,7 +957,7 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 .ld-hero-channels{
   position:relative;cursor:pointer;overflow:hidden;
   display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
-  padding:13px 26px;border-top:1px solid rgba(255,255,255,.14);
+  padding:10px 26px;border-top:1px solid rgba(255,255,255,.14);
   background:linear-gradient(120deg,rgba(47,111,237,.16),rgba(198,162,75,.09));
   transition:background .3s;
 }
@@ -973,7 +978,7 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 
 .ld-mini-logos{position:relative;display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
 .ld-mini-logo{
-  height:44px;padding:9px 16px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  height:36px;padding:7px 15px;border-radius:11px;display:flex;align-items:center;justify-content:center;
   background:#fff;
   box-shadow:0 5px 14px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,255,255,.6);
   transition:transform .3s, box-shadow .3s;
@@ -993,8 +998,8 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 
 /* شارة "تقنية سعودية" داخل صندوق الإحصائيات — مميّزة وواضحة في شريط ختامي */
 .ld-saudi-tech-inline{
-  position:relative;display:flex;align-items:center;justify-content:center;gap:14px;
-  padding:9px 20px;border-top:1px solid rgba(255,255,255,.14);
+  position:relative;display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:7px 20px;border-top:1px solid rgba(255,255,255,.14);
   background:linear-gradient(120deg,rgba(31,157,106,.16),rgba(0,0,0,.14));
 }
 .ld-saudi-tech-inline::before{
@@ -1002,7 +1007,7 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
   background:linear-gradient(90deg,transparent,rgba(125,227,184,.6),transparent);
 }
 .ld-saudi-tech-inline img{
-  height:42px;width:auto;padding:4px 9px;border-radius:10px;background:#fff;
+  height:34px;width:auto;padding:3px 8px;border-radius:9px;background:#fff;
   box-shadow:0 5px 14px rgba(0,0,0,.4), 0 0 0 1.5px rgba(125,227,184,.35);
   transition:transform .3s;
 }
@@ -1424,7 +1429,7 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
 .brand-3d:focus-visible .brand-logo-wrap{ outline:2px solid var(--gold); outline-offset:6px; border-radius:22px }
 
 /* ضمان عدم تغطية عنوان البطل بشريط العلامة العلوي */
-.ld-hero .in{ padding-top: 150px }
+.ld-hero .ld-hero-content{ padding-top: 150px }
 
 /* استجابة أنيقة */
 @media (max-width: 900px){
@@ -1433,7 +1438,7 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
   .brand-logo-wrap{ width:66px; height:66px }
   .brand-text{ font-size:22px !important }
   .ld-login-btn{ font-size:12.5px; padding:8px 14px }
-  .ld-hero .in{ padding-top: 130px }
+  .ld-hero .ld-hero-content{ padding-top: 130px }
 }
 @media (max-width: 560px){
   .ld-topbar{ justify-content:space-between }
@@ -1441,7 +1446,7 @@ tr.coa-group td{font-weight:800;background:var(--soft);color:var(--blue-2)}
   .ld-login-btn{ order:2 }
   .brand-logo-wrap{ width:54px; height:54px }
   .brand-text{ font-size:18px !important; letter-spacing:.2px }
-  .ld-hero .in{ padding-top: 110px }
+  .ld-hero .ld-hero-content{ padding-top: 110px }
 }
 
 /* احترام تفضيل تقليل الحركة (وصولية + استهلاك أقل على الأجهزة الضعيفة) */

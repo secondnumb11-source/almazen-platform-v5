@@ -219,12 +219,12 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   display:flex;align-items:center;
 }
 .ld-saudi-tech-badge img{
-  height:34px;width:auto;padding:4px 8px;border-radius:8px;
+  height:44px;width:auto;padding:5px 10px;border-radius:9px;
   background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25);
   transition:transform .3s;
 }
 .ld-saudi-tech-badge img:hover{transform:translateY(-2px) scale(1.04)}
-@media(max-width:560px){.ld-saudi-tech-badge img{height:26px}}
+@media(max-width:560px){.ld-saudi-tech-badge img{height:32px}}
 /* يكسر قيد max-width:860px الموروث من .ld-hero .ld-hero-content (الحاوية النصية أعلاه) —
    الأسلوب المعتاد لهذا الكسر: عرض 100vw + هوامش calc(50% - 50vw) يُلغيان
    أثر عرض الأب مهما كان (محاولة سابقة بـ left:50%/translateX فشلت لأن
